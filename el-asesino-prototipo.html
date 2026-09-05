@@ -119,6 +119,27 @@
   .footer-nav{ margin-top:auto; text-align:center; padding-top:24px;}
   .footer-nav a{ color:var(--text-dim); font-size:0.8rem; cursor:pointer; text-decoration:underline;}
   .hint{ color:var(--text-dim); font-size:0.8rem; margin-top:4px;}
+  .photo-btn{
+    background:linear-gradient(180deg,var(--panel-2),var(--panel)); border:1px solid var(--gold-dim);
+    color:var(--gold); font-family:'Bebas Neue',sans-serif; letter-spacing:0.05em; font-size:1.05rem;
+  }
+  .photo-btn:hover{ border-color:var(--gold);}
+  .info-icon{ cursor:pointer; color:var(--gold); font-style:normal; margin-left:4px;}
+  .step-indicator{ text-align:center; color:var(--text-dim); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.1em; margin-top:16px;}
+  .slide-nav{ display:flex; gap:10px; margin-top:6px;}
+  .slide-nav .btn{ flex:1;}
+  .star-name{ color:var(--gold); font-weight:700;}
+  .avatar-wrap.epic{ width:210px;}
+  .epic-copy{ font-size:1rem; margin-top:10px; line-height:1.4;}
+  .mission-photo{ width:100%; max-width:260px; aspect-ratio:3/4; margin:0 auto 16px; display:block;}
+  .mission-photo img{
+    width:100%; height:100%; object-fit:cover; display:block;
+    clip-path: polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%);
+    filter: drop-shadow(0 0 14px rgba(201,162,75,0.55));
+  }
+  .avatar.kite{ border:none; clip-path: polygon(50% 0%, 100% 40%, 50% 100%, 0% 40%);}
+  .avatar.dead.kite{ filter: grayscale(1) brightness(0.5) drop-shadow(0 0 10px rgba(85,85,90,0.6));}
+  .clickable-hint{ cursor:pointer;}
 </style>
 </head>
 <body>
@@ -129,7 +150,7 @@
 const CONFIG = {
   APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbyzHw8TNeC9-h9w2Noe4vEgfX6BeeFlzyj_0POYrOA_mVruieTDiGmL904VoDj4CV-i/exec", // termina en /exec
   SECRET_KEY: "RGA1985",                 // la misma que pusiste en Code.gs
-  BASE_URL: ""  // ej: "https://automatizacionesrga.github.io/juegos/el-asesino-prototipo.html" — la URL donde subas este archivo
+  BASE_URL: ""  // ej: "https://tuweb.com/juegos/el-asesino.html" — la URL donde subas este archivo
 };
 // ===================================================
 
@@ -239,6 +260,9 @@ function shareUrlFor(code){
   const base = CONFIG.BASE_URL || location.href.split('?')[0];
   return base + '?p=' + code;
 }
+function trySetSpectatorFull(){
+  if(state._game && state._game.modoEspectador==='completo'){ state.spectatorMode='full'; render(); }
+}
 function copyLink(url){
   navigator.clipboard.writeText(url).then(()=>alert('Enlace copiado')).catch(()=>alert(url));
 }
@@ -256,6 +280,10 @@ async function pollTick(){
       if(g.estado==='finalizada'){ state.screen='ranking'; }
       else if(me.estado==='muerto'){ if(state.screen!=='dead') state.screen='dead'; }
       else if(g.estado==='en_curso' && state.screen==='lobby'){ state.screen='game'; }
+      else if(g.estado==='en_curso' && g.ultimaReasignacion && g.ultimaReasignacion!==state.lastReassignSeen){
+        state.lastReassignSeen = g.ultimaReasignacion;
+        if(state.screen==='game') state.showReassignModal = true;
+      }
     }
   } else if(state.role==='admin'){
     if(g.estado==='finalizada'){ state.screen='ranking'; }
@@ -271,11 +299,11 @@ function startPolling(){
 }
 
 // ---------- acciones ----------
-async function actionCreateGame(participa){
+async function actionCreateGame(participa, modoEspectador){
   const code = genCode();
   const g = {
-    code, estado:'inscripcion', adminParticipa: participa,
-    creadoEn: Date.now(), iniciadoEn:null, jugadores: []
+    code, estado:'inscripcion', adminParticipa: participa, modoEspectador: modoEspectador || 'anon',
+    creadoEn: Date.now(), iniciadoEn:null, jugadores: [], ultimaReasignacion:null
   };
   const ok = await saveGame(code, g);
   if(!ok){ state.error='No se ha podido crear la partida. Revisa tu conexión e inténtalo de nuevo.'; render(); return; }
@@ -283,15 +311,10 @@ async function actionCreateGame(participa){
   state.adminParticipaFlag = participa;
   state.error = null;
   state._game = g;
-  if(participa){
-    state.role='player';
-    state._pendingAdminJoin = true;
-    state.screen='join';
-  } else {
-    state.role='admin';
-    state.screen='created';
-    saveSession();
-  }
+  state.role = participa ? 'player' : 'admin';
+  if(participa) state._pendingAdminJoin = true;
+  else saveSession();
+  state.screen = 'created';
   startPolling();
   render();
 }
@@ -321,7 +344,7 @@ async function actionSubmitJoin(){
   const jugador = {
     id: uid(), nombre, foto: state.photoData || null, accion, pin,
     objetivoId:null, accionAsignada:null, estado:'vivo', numVictimas:0,
-    ordenEliminacion:null, tsPrimeraMuerte:null, esAdmin: !!state._pendingAdminJoin
+    ordenEliminacion:null, tsPrimeraMuerte:null, esAdmin: !!state._pendingAdminJoin, victimasLog:[]
   };
   const result = await saveJoin(state.code, jugador);
   state.joining=false;
@@ -358,6 +381,7 @@ async function actionStartGame(){
   }
   state.error=null;
   state._game = result.data;
+  state.lastReassignSeen = result.data.ultimaReasignacion || null;
   state.screen = state.role==='admin' ? 'admin-panel' : 'game';
   render();
 }
@@ -388,6 +412,12 @@ async function actionReassignAll(){
   render();
 }
 
+async function actionToggleEspectadorMode(){
+  const nuevo = state._game.modoEspectador==='completo' ? 'anon' : 'completo';
+  const result = await callAction('setmode', { code: state.code, modo: nuevo });
+  if(result.ok){ state._game = result.data; render(); }
+}
+
 async function actionOpenSpectator(){
   const code = document.getElementById('spec-code-input').value.trim().toUpperCase();
   if(!code){ state.error='Introduce el código de la partida.'; render(); return; }
@@ -413,6 +443,7 @@ async function actionRecoverSubmit(){
   state.role = 'player';
   state.myPlayerId = result.jugadorId;
   state._game = result.data;
+  state.lastReassignSeen = result.data.ultimaReasignacion || null;
   saveSession();
   const pantalla = await screenForGameState(result.data, 'player', result.jugadorId);
   state.screen = pantalla || 'lobby';
@@ -420,14 +451,27 @@ async function actionRecoverSubmit(){
   render();
 }
 
+function revealMyPin(){
+  state.showMyPin = true;
+  render();
+  setTimeout(()=>{ state.showMyPin=false; render(); }, 2500);
+}
+
 function goHome(){
   if(state.pollTimer) clearInterval(state.pollTimer);
   clearSession();
-  Object.assign(state, {screen:'home', code:null, role:null, myPlayerId:null, error:null, photoData:null, _pendingAdminJoin:false});
+  Object.assign(state, {screen:'home', code:null, role:null, myPlayerId:null, error:null, photoData:null, _pendingAdminJoin:false, rankingSlide:0, showMyPin:false, showAccionHint:false});
   render();
 }
 
 // ---------- render ----------
+function formatElapsed(ms){
+  if(!ms || ms<0) ms=0;
+  const totalMin = Math.floor(ms/60000);
+  const h = Math.floor(totalMin/60);
+  const m = totalMin%60;
+  return (h>0? h+'h ':'') + m+'min';
+}
 function esc(s){ return (s||'').replace(/</g,'&lt;'); }
 function avatarSrc(foto){ return foto || 'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%231d1d22"/></svg>'); }
 
@@ -440,6 +484,7 @@ function render(){
     html = `
       <div class="top"><h1>EL ASESINO</h1><p>Un objetivo. Una misión. Un superviviente.</p></div>
       <div class="card">
+        <p class="hint">Recuerda: consigue que sea tu objetivo quien haga la acción asignada — nunca al revés.</p>
         <button class="btn btn-gold" onclick="renderCreateConfig()">Crear partida</button>
         <label>¿Ya tienes un código?</label>
         <input type="text" id="join-code-input" placeholder="Código de partida" maxlength="5">
@@ -472,13 +517,24 @@ function render(){
   }
 
   else if(state.screen==='create-config'){
+    const p = state.cfgParticipa;
+    const m = state.cfgModoEspectador;
     html = `
       <div class="top"><h1>NUEVA PARTIDA</h1></div>
       <div class="card">
         <p>¿Vas a jugar tú también, o solo vas a dirigir la partida?</p>
-        <button class="btn btn-gold" onclick="actionCreateGame(true)">Sí, yo también juego</button>
-        <button class="btn btn-outline" onclick="actionCreateGame(false)">No, solo organizo</button>
+        <div class="row">
+          <button class="btn ${p===true?'btn-gold':'btn-outline'}" onclick="state.cfgParticipa=true; render();">Sí, juego</button>
+          <button class="btn ${p===false?'btn-gold':'btn-outline'}" onclick="state.cfgParticipa=false; render();">No, organizo</button>
+        </div>
         <p class="hint">Si juegas, no podrás ver el panel general en directo — jugarás a ciegas como el resto.</p>
+        <p style="margin-top:18px;">¿Qué puede ver el modo espectador?</p>
+        <div class="row">
+          <button class="btn ${m==='anon'?'btn-gold':'btn-outline'}" onclick="state.cfgModoEspectador='anon'; render();">Solo el contador</button>
+          <button class="btn ${m==='completo'?'btn-gold':'btn-outline'}" onclick="state.cfgModoEspectador='completo'; render();">Caras y nombres</button>
+        </div>
+        <p class="hint">Podrás cambiarlo en cualquier momento desde el panel del organizador.</p>
+        <button class="btn btn-gold" style="margin-top:16px;" ${(p===undefined||!m)?'disabled':''} onclick="actionCreateGame(state.cfgParticipa, state.cfgModoEspectador)">Crear partida</button>
       </div>
       <div class="footer-nav"><a onclick="goHome()">← Volver</a></div>`;
   }
@@ -498,7 +554,7 @@ function render(){
           <button class="btn btn-outline" onclick="copyLink('${url}')">Copiar enlace</button>
           <a class="btn btn-outline" href="${waUrl}" target="_blank" rel="noopener">WhatsApp</a>
         </div>
-        <button class="btn btn-gold" onclick="state.screen='lobby'; render();">Ir a la sala de espera</button>
+        <button class="btn btn-gold" onclick="state.screen=(state.adminParticipaFlag?'join':'lobby'); render();">${state.adminParticipaFlag? 'Continuar y crear tu perfil' : 'Ir a la sala de espera'}</button>
       </div>
       <div class="footer-nav"><a onclick="goHome()">← Cancelar</a></div>`;
   }
@@ -508,12 +564,18 @@ function render(){
       <div class="top"><h1>ÚNETE</h1><p>Partida ${esc(state.code)}</p></div>
       <div class="card">
         <div class="avatar-wrap"><img id="photo-preview" class="avatar" src="${avatarSrc(state.photoData)}"></div>
-        <label>Tu foto</label>
-        <input type="file" accept="image/*" onchange="handlePhotoInput(this)">
-        <p class="hint">Si has abierto este enlace desde WhatsApp y la cámara no responde, pulsa los tres puntos de arriba y elige "Abrir en el navegador".</p>
+        <label>Tu rostro para la arena</label>
+        <input type="file" id="file-camera" accept="image/*" capture="user" style="display:none" onchange="handlePhotoInput(this)">
+        <input type="file" id="file-gallery" accept="image/*" style="display:none" onchange="handlePhotoInput(this)">
+        <div class="row">
+          <button type="button" class="btn photo-btn" onclick="document.getElementById('file-camera').click()">📸 Hacer foto</button>
+          <button type="button" class="btn photo-btn" onclick="document.getElementById('file-gallery').click()">🖼️ Desde galería</button>
+        </div>
+        <p class="hint">Si has abierto este enlace desde WhatsApp y la cámara no responde, pulsa los tres puntos de arriba y elige "Abrir en el navegador", o usa "Desde galería".</p>
         <label>Tu nombre</label>
         <input type="text" id="j-nombre" placeholder="Nombre visible para los demás">
-        <label>Tu acción para matar</label>
+        <label>Propón una acción para matar <span class="info-icon" onclick="state.showAccionHint=!state.showAccionHint; render();">ⓘ</span></label>
+        ${state.showAccionHint? `<p class="hint">Ideas: que te dé un masaje, que brinde contigo, que te haga una foto juntos, que te cuente un secreto... Cuanto más fácil de pedir sin levantar sospechas y más divertida, ¡mejor será el juego!</p>` : ''}
         <input type="text" id="j-accion" placeholder="Ej: que te dé un masaje">
         <label>Tu PIN secreto (4 números)</label>
         <input type="tel" id="j-pin" maxlength="4" placeholder="0000">
@@ -562,13 +624,24 @@ function render(){
     html = `
       <div class="top"><h1>TU MISIÓN</h1><p class="tag">Quedan ${vivos} en juego</p></div>
       <div class="card">
-        <div class="avatar-wrap"><img class="avatar" src="${avatarSrc(target.foto)}"></div>
+        <div class="mission-photo"><img src="${avatarSrc(target.foto)}"></div>
         <div class="name">${esc(target.nombre)}</div>
+        <p class="tag" style="margin-top:14px;">Consigue que tu objetivo:</p>
         <div class="mission-box">${esc(me.accionAsignada)}</div>
         <button class="btn btn-blood" onclick="state.showKillModal=true; state.modalError=null; render();">He completado mi misión</button>
       </div>
       <div class="card center">
-        <p class="hint">Víctimas conseguidas: ${me.numVictimas}</p>
+        <p class="hint clickable-hint" onclick="state.showVictimList=!state.showVictimList; render();">Víctimas conseguidas: ${me.numVictimas} ${me.numVictimas>0?(state.showVictimList?'▲':'▼'):''}</p>
+        ${state.showVictimList && me.victimasLog && me.victimasLog.length ? `
+          <div style="margin-top:8px; text-align:left;">
+            ${me.victimasLog.map((v,i)=>`
+              <div class="ranking-row">
+                <img src="${avatarSrc(v.foto)}">
+                <div class="rn">${i+1}. ${esc(v.nombre)}</div>
+                <div class="rv">${formatElapsed((v.ts||0)-(g.iniciadoEn||0))}</div>
+              </div>`).join('')}
+          </div>` : ''}
+        ${state.showMyPin? `<div class="code-box" style="font-size:1.8rem; margin-top:12px;">${esc(me.pin)}</div>` : `<button class="btn btn-outline" onclick="revealMyPin()">¿Olvidaste tu PIN?</button>`}
       </div>
       <div class="footer-nav"><a onclick="goHome()">Salir</a></div>
     `;
@@ -585,6 +658,16 @@ function render(){
           </div>
         </div>`;
     }
+    if(state.showReassignModal){
+      html += `
+        <div class="modal-bg">
+          <div class="modal center">
+            <h3 style="margin-bottom:10px;">⚠️ EL JUEGO HA DADO UN VUELCO</h3>
+            <p class="hint" style="font-size:0.95rem;">¿Pensabas que ya lo tenías controlado? Todas las misiones han cambiado. Olvida lo que sabías — nadie es ya quien creías que era.</p>
+            <button class="btn btn-gold" onclick="state.showReassignModal=false; render();">Ver mi nuevo objetivo →</button>
+          </div>
+        </div>`;
+    }
   }
 
   else if(state.screen==='dead'){
@@ -594,9 +677,9 @@ function render(){
     html = `
       <div class="top"><h1>HAS CAÍDO</h1></div>
       <div class="card center">
-        <div class="avatar-wrap dead"><img class="avatar dead" src="${avatarSrc(me.foto)}"><div class="skull">💀</div></div>
+        <div class="avatar-wrap dead"><img class="avatar dead kite" src="${avatarSrc(me.foto)}"><div class="skull">💀</div></div>
         <div class="name dead">${esc(me.nombre)}</div>
-        <p class="hint">Quedan ${vivos} jugadores en la arena. Sigue la partida desde el modo espectador.</p>
+        <p class="hint">Quedan ${vivos} jugadores en la arena. 🤫 Solo los caídos conocéis este secreto — ni una pista a quien sigue vivo, o le quitaréis toda la gracia al juego.</p>
         <button class="btn btn-outline" onclick="actionOpenSpectatorFromInside()">Ver marcador</button>
       </div>
       <div class="footer-nav"><a onclick="goHome()">Salir</a></div>`;
@@ -610,8 +693,12 @@ function render(){
       <div class="top"><h1>PANEL DEL ORGANIZADOR</h1><p>Partida ${esc(state.code)} · ${vivos.length} vivos / ${g.jugadores.length}</p></div>
       <div class="card">
         <button class="btn btn-gold" onclick="actionReassignAll()">Reasignar todos los objetivos</button>
-        <p class="hint">Reparte de nuevo objetivo y acción solo entre los jugadores vivos.</p>
+        <p class="hint">Reparte de nuevo objetivo y acción solo entre los jugadores vivos, y avisa a todos con un mensaje épico.</p>
         ${state.error? `<div class="err">${esc(state.error)}</div>`:''}
+      </div>
+      <div class="card">
+        <p class="hint">Modo espectador actual: <strong>${g.modoEspectador==='completo'?'Caras y nombres':'Solo el contador'}</strong></p>
+        <button class="btn btn-outline" onclick="actionToggleEspectadorMode()">Cambiar a ${g.modoEspectador==='completo'?'solo el contador':'caras y nombres'}</button>
       </div>
       <div class="card">
         <h3 style="margin-bottom:10px;">Jugadores</h3>
@@ -630,12 +717,15 @@ function render(){
   else if(state.screen==='spectator'){
     const g = state._game;
     const vivos = g.jugadores.filter(j=>j.estado==='vivo').length;
+    const permiteCompleto = g.modoEspectador==='completo';
+    if(!permiteCompleto) state.spectatorMode='anon';
     html = `
       <div class="top"><h1>MARCADOR EN VIVO</h1><p>Partida ${esc(state.code)}</p></div>
       <div class="toggle-row">
         <button class="btn ${state.spectatorMode==='anon'?'active':''}" onclick="state.spectatorMode='anon'; render();">Anonimizado</button>
-        <button class="btn ${state.spectatorMode==='full'?'active':''}" onclick="state.spectatorMode='full'; render();">Completo</button>
+        <button class="btn ${state.spectatorMode==='full'?'active':''}" ${permiteCompleto?'':'disabled'} onclick="trySetSpectatorFull()">Completo</button>
       </div>
+      ${!permiteCompleto? '<p class="hint center">El organizador ha desactivado la vista con caras y nombres.</p>' : ''}
       ${state.spectatorMode==='anon' ? `
         <div class="counter">
           <div class="big">${vivos} / ${g.jugadores.length}</div>
@@ -655,42 +745,88 @@ function render(){
     const g = state._game;
     const superviviente = g.jugadores.find(j=>j.estado==='vivo');
     const conKills = g.jugadores.filter(j=>j.numVictimas>0);
-    const veloz = conKills.slice().sort((a,b)=>a.tsPrimeraMuerte-b.tsPrimeraMuerte)[0];
-    const serie = g.jugadores.slice().sort((a,b)=>b.numVictimas-a.numVictimas)[0];
-    const tabla = g.jugadores.slice().sort((a,b)=> b.numVictimas - a.numVictimas || (a.ordenEliminacion||99)-(b.ordenEliminacion||99));
-    html = `
-      <div class="top"><h1>FIN DE LA PARTIDA</h1></div>
-      ${superviviente? `
-      <div class="badge">
-        <img src="${avatarSrc(superviviente.foto)}">
-        <div><div class="bt">🏆 Superviviente</div><div class="bn">${esc(superviviente.nombre)}</div></div>
-      </div>`:''}
-      ${veloz? `
-      <div class="badge">
-        <img src="${avatarSrc(veloz.foto)}">
-        <div><div class="bt">⚡ Asesino más veloz</div><div class="bn">${esc(veloz.nombre)}</div></div>
-      </div>`:''}
-      ${serie && serie.numVictimas>0 ? `
-      <div class="badge">
-        <img src="${avatarSrc(serie.foto)}">
-        <div><div class="bt">🔪 Asesino en serie</div><div class="bn">${esc(serie.nombre)} · ${serie.numVictimas} víctimas</div></div>
-      </div>`:''}
-      <div class="card">
-        <h3 style="margin-bottom:6px;">Clasificación</h3>
-        ${tabla.map(j=>`
-          <div class="ranking-row">
-            <img src="${avatarSrc(j.foto)}">
-            <div class="rn">${esc(j.nombre)} ${j.estado==='vivo'?'':'💀'}</div>
-            <div class="rv">${j.numVictimas} víctimas</div>
-          </div>`).join('')}
-      </div>
-      <div class="footer-nav"><a onclick="goHome()">Volver al inicio</a></div>`;
+    const veloz = conKills.length ? conKills.slice().sort((a,b)=>a.tsPrimeraMuerte-b.tsPrimeraMuerte)[0] : null;
+    const maxVictimas = conKills.length ? Math.max(...conKills.map(j=>j.numVictimas)) : 0;
+    const serie = maxVictimas>0 ? conKills.find(j=>j.numVictimas===maxVictimas) : null;
+    const eliminados = g.jugadores.filter(j=>j.estado==='muerto').sort((a,b)=>(b.ordenEliminacion||0)-(a.ordenEliminacion||0));
+    const tabla = superviviente ? [superviviente, ...eliminados] : eliminados;
+    function tags(j){
+      const t=[];
+      if(superviviente && j.id===superviviente.id) t.push('🏆');
+      if(veloz && j.id===veloz.id) t.push('⚡');
+      if(serie && j.id===serie.id) t.push('🔪');
+      return t;
+    }
+    const slide = state.rankingSlide || 0;
+
+    if(slide===0 && superviviente){
+      html = `
+        <div class="top"><h1>TIENE UN GANADOR</h1></div>
+        <div class="card center">
+          <div class="avatar-wrap epic"><img class="avatar" src="${avatarSrc(superviviente.foto)}"></div>
+          <div class="name" style="font-size:2.1rem;">👑 ${esc(superviviente.nombre)}</div>
+          <p class="epic-copy hint">El único que sigue en pie. Todos los demás cayeron ante su astucia — la arena ha hablado.</p>
+        </div>
+        <div class="step-indicator">Paso 1 de 4</div>
+        <div class="slide-nav"><button class="btn btn-gold" onclick="rankingNav(1)">Siguiente →</button></div>`;
+    } else if(slide===1 && veloz){
+      html = `
+        <div class="top"><h1>EL MÁS VELOZ</h1></div>
+        <div class="card center">
+          <div class="avatar-wrap epic"><img class="avatar" src="${avatarSrc(veloz.foto)}"></div>
+          <div class="name" style="font-size:2.1rem;">⚡ ${esc(veloz.nombre)}</div>
+          <p class="epic-copy hint">El primero en mancharse las manos. Ni el resto tuvo tiempo de sospechar.</p>
+        </div>
+        <div class="step-indicator">Paso 2 de 4</div>
+        <div class="slide-nav">
+          <button class="btn btn-outline" onclick="rankingNav(-1)">← Anterior</button>
+          <button class="btn btn-gold" onclick="rankingNav(1)">Siguiente →</button>
+        </div>`;
+    } else if(slide===2 && serie){
+      html = `
+        <div class="top"><h1>ASESINO EN SERIE</h1></div>
+        <div class="card center">
+          <div class="avatar-wrap epic"><img class="avatar" src="${avatarSrc(serie.foto)}"></div>
+          <div class="name" style="font-size:2.1rem;">🔪 ${esc(serie.nombre)}</div>
+          <p class="epic-copy hint">${serie.numVictimas} víctimas a su nombre. Nadie a su alrededor estaba realmente a salvo.</p>
+        </div>
+        <div class="step-indicator">Paso 3 de 4</div>
+        <div class="slide-nav">
+          <button class="btn btn-outline" onclick="rankingNav(-1)">← Anterior</button>
+          <button class="btn btn-gold" onclick="rankingNav(1)">Siguiente →</button>
+        </div>`;
+    } else {
+      html = `
+        <div class="top"><h1>CLASIFICACIÓN FINAL</h1></div>
+        <div class="card">
+          ${tabla.map(j=>{
+            const tg = tags(j);
+            return `
+            <div class="ranking-row">
+              <img src="${avatarSrc(j.foto)}">
+              <div class="rn ${tg.length?'star-name':''}">${tg.join(' ')} ${esc(j.nombre)}</div>
+              <div class="rv">${j.numVictimas} víctimas</div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="card center">
+          <p class="hint">🎭 <strong>El Asesino</strong> es un juego creado por Roberto González Arranz.<br>Gracias por jugar — espero que hayáis disfrutado cazándoos los unos a los otros.</p>
+        </div>
+        <div class="step-indicator">Paso 4 de 4</div>
+        <div class="slide-nav"><button class="btn btn-outline" onclick="rankingNav(-1)">← Anterior</button></div>
+        <div class="footer-nav"><a onclick="goHome()">Volver al inicio</a></div>`;
+    }
   }
 
   app.innerHTML = html;
 }
 
-function renderCreateConfig(){ state.screen='create-config'; render(); }
+function rankingNav(delta){
+  state.rankingSlide = Math.max(0, Math.min(3, (state.rankingSlide||0)+delta));
+  render();
+}
+
+function renderCreateConfig(){ state.screen='create-config'; state.cfgParticipa=undefined; state.cfgModoEspectador=undefined; render(); }
 function actionOpenSpectatorFromInside(){
   state.role='spectator'; state.screen='spectator'; state.myPlayerId=null; render();
 }
@@ -720,6 +856,7 @@ async function screenForGameState(g, role, myPlayerId){
         state.role = session.role;
         state.myPlayerId = session.myPlayerId;
         state._game = g;
+        state.lastReassignSeen = g.ultimaReasignacion || null;
         state.screen = pantalla;
         startPolling();
         render();
