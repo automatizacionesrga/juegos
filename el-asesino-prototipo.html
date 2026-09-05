@@ -208,6 +208,33 @@ async function saveGame(code, obj){
     return !!json.ok;
   }catch(e){ console.error(e); return false; }
 }
+async function callAction(action, payload){
+  try{
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(Object.assign({ key: CONFIG.SECRET_KEY, action }, payload))
+    });
+    const json = await res.json();
+    if(json.error) return { ok:false, error: json.error };
+    return { ok:true, data: json.data ? JSON.parse(json.data) : null, jugadorId: json.jugadorId };
+  }catch(e){ console.error(e); return { ok:false, error:'red' }; }
+}
+async function saveJoin(code, jugador){ return callAction('join', { code, jugador }); }
+function saveSession(){
+  try{
+    localStorage.setItem('elasesino-session', JSON.stringify({
+      code: state.code, myPlayerId: state.myPlayerId, role: state.role
+    }));
+  }catch(e){ /* almacenamiento no disponible, no pasa nada grave */ }
+}
+function loadSession(){
+  try{ return JSON.parse(localStorage.getItem('elasesino-session') || 'null'); }
+  catch(e){ return null; }
+}
+function clearSession(){
+  try{ localStorage.removeItem('elasesino-session'); }catch(e){}
+}
 function shareUrlFor(code){
   const base = CONFIG.BASE_URL || location.href.split('?')[0];
   return base + '?p=' + code;
@@ -219,6 +246,7 @@ function copyLink(url){
 // ---------- transiciones de estado tras poll ----------
 async function pollTick(){
   if(!state.code) return;
+  if(state.screen==='join' || state.showKillModal) return; // no interrumpir mientras el usuario está escribiendo
   const g = await loadGame(state.code);
   if(!g) return;
   state._game = g;
@@ -244,13 +272,17 @@ function startPolling(){
 
 // ---------- acciones ----------
 async function actionCreateGame(participa){
-  state.code = genCode();
-  state.adminParticipaFlag = participa;
+  const code = genCode();
   const g = {
-    code: state.code, estado:'inscripcion', adminParticipa: participa,
+    code, estado:'inscripcion', adminParticipa: participa,
     creadoEn: Date.now(), iniciadoEn:null, jugadores: []
   };
-  await saveGame(state.code, g);
+  const ok = await saveGame(code, g);
+  if(!ok){ state.error='No se ha podido crear la partida. Revisa tu conexión e inténtalo de nuevo.'; render(); return; }
+  state.code = code;
+  state.adminParticipaFlag = participa;
+  state.error = null;
+  state._game = g;
   if(participa){
     state.role='player';
     state._pendingAdminJoin = true;
@@ -258,6 +290,7 @@ async function actionCreateGame(participa){
   } else {
     state.role='admin';
     state.screen='created';
+    saveSession();
   }
   startPolling();
   render();
@@ -282,19 +315,29 @@ async function actionSubmitJoin(){
     state.error='Rellena nombre, acción, y un PIN de exactamente 4 números.';
     render(); return;
   }
-  const g = await loadGame(state.code);
-  if(!g){ state.error='La partida ya no existe.'; render(); return; }
+  state.error=null;
+  state.joining=true;
+  render();
   const jugador = {
     id: uid(), nombre, foto: state.photoData || null, accion, pin,
     objetivoId:null, accionAsignada:null, estado:'vivo', numVictimas:0,
     ordenEliminacion:null, tsPrimeraMuerte:null, esAdmin: !!state._pendingAdminJoin
   };
-  g.jugadores.push(jugador);
-  await saveGame(state.code, g);
+  const result = await saveJoin(state.code, jugador);
+  state.joining=false;
+  if(!result.ok){
+    if(result.error==='no existe la partida') state.error='Esta partida ya no existe. Vuelve atrás y prueba con otro código.';
+    else if(result.error==='partida ya iniciada') state.error='Esta partida ya ha empezado, no admite más jugadores.';
+    else state.error='No se ha podido guardar. Revisa tu conexión e inténtalo de nuevo.';
+    render(); return;
+  }
+  state._game = result.data;
   state.myPlayerId = jugador.id;
   state.error=null;
+  saveSession();
   state.screen='lobby';
   render();
+  pollTick();
 }
 
 function handlePhotoInput(input){
@@ -308,73 +351,40 @@ function handlePhotoInput(input){
 }
 
 async function actionStartGame(){
-  const g = await loadGame(state.code);
-  if(!g || g.jugadores.length<4){ state.error='Necesitas al menos 4 jugadores.'; render(); return; }
-  const ids = g.jugadores.map(j=>j.id);
-  const objetivos = derangement(ids);
-  const accionesOrden = derangement(ids);
-  g.jugadores.forEach((j,i)=>{
-    j.objetivoId = objetivos[i];
-    const jugadorAccion = g.jugadores.find(p=>p.id===accionesOrden[i]);
-    j.accionAsignada = jugadorAccion.accion;
-  });
-  g.estado='en_curso'; g.iniciadoEn=Date.now();
-  await saveGame(state.code, g);
-  state._game = g;
+  const result = await callAction('start', { code: state.code });
+  if(!result.ok){
+    state.error = result.error==='jugadores insuficientes' ? 'Necesitas al menos 4 jugadores.' : 'No se ha podido iniciar. Inténtalo de nuevo.';
+    render(); return;
+  }
+  state.error=null;
+  state._game = result.data;
   state.screen = state.role==='admin' ? 'admin-panel' : 'game';
   render();
 }
 
-function inheritFrom(g, killer, deadPlayer){
-  killer.objetivoId = deadPlayer.objetivoId;
-  killer.accionAsignada = deadPlayer.accionAsignada;
-  // evitar que el objetivo heredado sea uno mismo (cadena circular)
-  let guard = 0;
-  while(killer.objetivoId === killer.id && guard < g.jugadores.length){
-    const next = g.jugadores.find(p=>p.id===killer.objetivoId);
-    if(!next) break;
-    killer.objetivoId = next.objetivoId;
-    killer.accionAsignada = next.accionAsignada;
-    guard++;
-  }
-}
-
 async function actionConfirmKill(){
   const pinInput = document.getElementById('kill-pin').value.trim();
-  const g = await loadGame(state.code);
-  const killer = g.jugadores.find(j=>j.id===state.myPlayerId);
-  const victim = g.jugadores.find(j=>j.id===killer.objetivoId);
-  if(!victim || victim.estado!=='vivo'){ state.modalError='Ese objetivo ya no está disponible.'; render(); return; }
-  if(victim.pin !== pinInput){ state.modalError='PIN incorrecto.'; render(); return; }
-  const vivosAntes = g.jugadores.filter(j=>j.estado==='vivo').length;
-  victim.estado='muerto';
-  victim.ordenEliminacion = (g.jugadores.filter(j=>j.ordenEliminacion).length)+1;
-  killer.numVictimas += 1;
-  if(!killer.tsPrimeraMuerte) killer.tsPrimeraMuerte = Date.now();
-  inheritFrom(g, killer, victim);
-  const vivos = g.jugadores.filter(j=>j.estado==='vivo');
-  if(vivos.length<=1){ g.estado='finalizada'; }
-  await saveGame(state.code, g);
-  state._game = g;
+  const result = await callAction('kill', { code: state.code, killerId: state.myPlayerId, pin: pinInput });
+  if(!result.ok){
+    state.modalError = result.error==='pin incorrecto' ? 'PIN incorrecto.' :
+                        result.error==='objetivo no disponible' ? 'Ese objetivo ya no está disponible.' :
+                        'No se ha podido confirmar. Inténtalo de nuevo.';
+    render(); return;
+  }
+  state._game = result.data;
   state.showKillModal=false; state.modalError=null;
-  state.screen = g.estado==='finalizada' ? 'ranking' : 'game';
+  state.screen = result.data.estado==='finalizada' ? 'ranking' : 'game';
   render();
 }
 
 async function actionReassignAll(){
-  const g = await loadGame(state.code);
-  const vivos = g.jugadores.filter(j=>j.estado==='vivo');
-  if(vivos.length<3){ state.error='Necesitas al menos 3 jugadores vivos para reasignar.'; render(); return; }
-  const ids = vivos.map(j=>j.id);
-  const objetivos = derangement(ids);
-  const accionesOrden = derangement(ids);
-  vivos.forEach((j,i)=>{
-    j.objetivoId = objetivos[i];
-    const jugadorAccion = g.jugadores.find(p=>p.id===accionesOrden[i]);
-    j.accionAsignada = jugadorAccion.accion;
-  });
-  await saveGame(state.code, g);
-  state._game = g;
+  const result = await callAction('reassign', { code: state.code });
+  if(!result.ok){
+    state.error = result.error==='vivos insuficientes' ? 'Necesitas al menos 3 jugadores vivos para reasignar.' : 'No se ha podido reasignar. Inténtalo de nuevo.';
+    render(); return;
+  }
+  state.error=null;
+  state._game = result.data;
   render();
 }
 
@@ -387,8 +397,32 @@ async function actionOpenSpectator(){
   startPolling(); pollTick();
 }
 
+async function actionRecoverSubmit(){
+  const code = document.getElementById('rec-code').value.trim().toUpperCase();
+  const nombre = document.getElementById('rec-nombre').value.trim();
+  const pin = document.getElementById('rec-pin').value.trim();
+  if(!code || !nombre || !pin){ state.error='Rellena código, nombre y PIN.'; render(); return; }
+  state.recovering=true; state.error=null; render();
+  const result = await callAction('recover', { code, nombre, pin });
+  state.recovering=false;
+  if(!result.ok){
+    state.error = result.error==='no existe la partida' ? 'No existe ninguna partida con ese código.' : 'No hemos encontrado ningún jugador con ese nombre y PIN en esa partida.';
+    render(); return;
+  }
+  state.code = code;
+  state.role = 'player';
+  state.myPlayerId = result.jugadorId;
+  state._game = result.data;
+  saveSession();
+  const pantalla = await screenForGameState(result.data, 'player', result.jugadorId);
+  state.screen = pantalla || 'lobby';
+  startPolling();
+  render();
+}
+
 function goHome(){
   if(state.pollTimer) clearInterval(state.pollTimer);
+  clearSession();
   Object.assign(state, {screen:'home', code:null, role:null, myPlayerId:null, error:null, photoData:null, _pendingAdminJoin:false});
   render();
 }
@@ -416,7 +450,25 @@ function render(){
         <label>Ver el marcador en directo</label>
         <input type="text" id="spec-code-input" placeholder="Código de partida" maxlength="5">
         <button class="btn btn-outline" onclick="actionOpenSpectator()">Abrir modo espectador</button>
-      </div>`;
+      </div>
+      <div class="footer-nav"><a onclick="state.screen='recover'; state.error=null; render();">¿Ya estabas jugando y perdiste el acceso? Recupera tu partida</a></div>`;
+  }
+
+  else if(state.screen==='recover'){
+    html = `
+      <div class="top"><h1>RECUPERAR PARTIDA</h1></div>
+      <div class="card">
+        <p class="hint">Introduce los mismos datos con los que te inscribiste.</p>
+        <label>Código de partida</label>
+        <input type="text" id="rec-code" placeholder="Código de partida" maxlength="5">
+        <label>Tu nombre</label>
+        <input type="text" id="rec-nombre" placeholder="El mismo nombre con el que te uniste">
+        <label>Tu PIN</label>
+        <input type="tel" id="rec-pin" maxlength="4" placeholder="0000">
+        ${state.error? `<div class="err">${esc(state.error)}</div>`:''}
+        <button class="btn btn-gold" ${state.recovering?'disabled':''} onclick="actionRecoverSubmit()">${state.recovering?'Buscando…':'Recuperar'}</button>
+      </div>
+      <div class="footer-nav"><a onclick="goHome()">← Volver</a></div>`;
   }
 
   else if(state.screen==='create-config'){
@@ -457,7 +509,8 @@ function render(){
       <div class="card">
         <div class="avatar-wrap"><img id="photo-preview" class="avatar" src="${avatarSrc(state.photoData)}"></div>
         <label>Tu foto</label>
-        <input type="file" accept="image/*" capture="user" onchange="handlePhotoInput(this)">
+        <input type="file" accept="image/*" onchange="handlePhotoInput(this)">
+        <p class="hint">Si has abierto este enlace desde WhatsApp y la cámara no responde, pulsa los tres puntos de arriba y elige "Abrir en el navegador".</p>
         <label>Tu nombre</label>
         <input type="text" id="j-nombre" placeholder="Nombre visible para los demás">
         <label>Tu acción para matar</label>
@@ -466,14 +519,16 @@ function render(){
         <input type="tel" id="j-pin" maxlength="4" placeholder="0000">
         <p class="hint">Dale este PIN solo a quien consiga matarte, en el momento en que lo logre.</p>
         ${state.error? `<div class="err">${esc(state.error)}</div>`:''}
-        <button class="btn btn-gold" onclick="actionSubmitJoin()">Entrar en la partida</button>
-      </div>`;
+        <button class="btn btn-gold" ${state.joining?'disabled':''} onclick="actionSubmitJoin()">${state.joining?'Entrando…':'Entrar en la partida'}</button>
+      </div>
+      <div class="footer-nav"><a onclick="goHome()">← Probar con otro código</a></div>`;
   }
 
   else if(state.screen==='lobby'){
     const g = state._game;
     const jugadores = g ? g.jugadores : [];
-    const esAdmin = state.role==='admin';
+    const misDatos = jugadores.find(j=>j.id===state.myPlayerId);
+    const puedeIniciar = state.role==='admin' || (misDatos && misDatos.esAdmin);
     html = `
       <div class="top"><h1>SALA DE ESPERA</h1><p>Partida ${esc(state.code)} · ${jugadores.length} unidos</p></div>
       <div class="card">
@@ -486,7 +541,7 @@ function render(){
         </div>
         ${jugadores.length===0? '<p class="hint center">Aún no se ha unido nadie.</p>':''}
       </div>
-      ${esAdmin? `
+      ${puedeIniciar? `
         <div class="card">
           <div class="row">
             <button class="btn btn-outline" onclick="copyLink('${shareUrlFor(state.code)}')">Copiar enlace</button>
@@ -640,27 +695,55 @@ function actionOpenSpectatorFromInside(){
   state.role='spectator'; state.screen='spectator'; state.myPlayerId=null; render();
 }
 
-(function initFromLink(){
+async function screenForGameState(g, role, myPlayerId){
+  if(g.estado==='finalizada') return 'ranking';
+  if(role==='player'){
+    const me = g.jugadores.find(j=>j.id===myPlayerId);
+    if(!me) return null;
+    if(me.estado==='muerto') return 'dead';
+    return g.estado==='en_curso' ? 'game' : 'lobby';
+  }
+  if(role==='admin'){
+    return g.estado==='en_curso' ? 'admin-panel' : 'lobby';
+  }
+  return null;
+}
+
+(async function init(){
+  const session = loadSession();
+  if(session && session.code){
+    const g = await loadGame(session.code);
+    if(g){
+      const pantalla = await screenForGameState(g, session.role, session.myPlayerId);
+      if(pantalla){
+        state.code = session.code;
+        state.role = session.role;
+        state.myPlayerId = session.myPlayerId;
+        state._game = g;
+        state.screen = pantalla;
+        startPolling();
+        render();
+        return;
+      }
+    }
+    clearSession();
+  }
   const params = new URLSearchParams(location.search);
   const p = params.get('p');
-  if(!p) return;
+  if(!p){ render(); return; }
   state.code = p.toUpperCase();
   state.role = 'player';
-  (async ()=>{
-    const g = await loadGame(state.code);
-    if(g && g.estado==='inscripcion'){
-      state.screen='join';
-      startPolling();
-    } else if(g){
-      state.error='Esta partida ya ha empezado y no admite nuevos jugadores.';
-    } else {
-      state.error='No existe ninguna partida con ese código.';
-    }
-    render();
-  })();
+  const g = await loadGame(state.code);
+  if(g && g.estado==='inscripcion'){
+    state.screen='join';
+    startPolling();
+  } else if(g){
+    state.error='Esta partida ya ha empezado y no admite nuevos jugadores.';
+  } else {
+    state.error='No existe ninguna partida con ese código.';
+  }
+  render();
 })();
-
-render();
 </script>
 </body>
 </html>
