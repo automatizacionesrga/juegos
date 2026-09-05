@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El Asesino</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0b0d;
+    --panel:#151519;
+    --panel-2:#1d1d22;
+    --gold:#c9a24b;
+    --gold-dim:#8a7238;
+    --blood:#8c1f28;
+    --grey-dead:#55555a;
+    --text:#eae7df;
+    --text-dim:#9a978f;
+    --border:#2a2a30;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Work Sans',sans-serif;
+    min-height:100vh;
+  }
+  h1,h2,h3,.display{
+    font-family:'Bebas Neue',sans-serif;
+    letter-spacing:0.03em;
+    font-weight:400;
+    margin:0;
+  }
+  #app{max-width:480px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; padding:20px 18px 40px;}
+  .wide #app{max-width:900px;}
+  .top{ text-align:center; margin-bottom:22px;}
+  .top h1{font-size:2.6rem; color:var(--gold);}
+  .top p{color:var(--text-dim); margin-top:2px; font-size:0.9rem;}
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:6px;
+    padding:22px; margin-bottom:14px;
+  }
+  .btn{
+    display:block; width:100%; padding:14px 16px; border-radius:5px; border:none;
+    font-family:'Work Sans',sans-serif; font-weight:600; font-size:1rem; cursor:pointer;
+    margin-top:10px; text-align:center; text-decoration:none;
+  }
+  .btn-gold{ background:var(--gold); color:#1a1305;}
+  .btn-gold:hover{ background:#d9b360;}
+  .btn-outline{ background:transparent; color:var(--text); border:1px solid var(--border);}
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold);}
+  .btn-blood{ background:var(--blood); color:#f4e6e6;}
+  .btn:disabled{ opacity:0.4; cursor:not-allowed;}
+  label{ display:block; font-size:0.85rem; color:var(--text-dim); margin:14px 0 6px;}
+  input[type=text],input[type=password],input[type=tel]{
+    width:100%; padding:12px; border-radius:5px; border:1px solid var(--border);
+    background:var(--panel-2); color:var(--text); font-size:1rem; font-family:inherit;
+  }
+  input:focus{ outline:none; border-color:var(--gold);}
+  .avatar{
+    width:100%; aspect-ratio:1/1; border-radius:50%; object-fit:cover;
+    border:3px solid var(--gold); display:block; margin:0 auto;
+  }
+  .avatar.dead{ filter:grayscale(1) brightness(0.55); border-color:var(--grey-dead);}
+  .avatar-wrap{ position:relative; width:150px; margin:0 auto 14px;}
+  .skull{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:2.6rem; opacity:0; pointer-events:none;
+  }
+  .avatar-wrap.dead .skull{ opacity:0.9; }
+  .name{ text-align:center; font-size:1.5rem; margin-top:6px;}
+  .name.dead{ color:var(--grey-dead); text-decoration:line-through; text-decoration-color:var(--blood);}
+  .tag{ text-align:center; color:var(--text-dim); font-size:0.8rem; text-transform:uppercase; letter-spacing:0.08em;}
+  .mission-box{
+    background:var(--panel-2); border-left:3px solid var(--gold); padding:14px 16px;
+    border-radius:4px; margin:16px 0; font-size:1.1rem; line-height:1.4;
+  }
+  .lobby-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:14px;}
+  .lobby-item{ text-align:center;}
+  .lobby-item img{ width:100%; aspect-ratio:1/1; border-radius:50%; object-fit:cover; border:2px solid var(--gold);}
+  .lobby-item .lname{ font-size:0.78rem; margin-top:4px; color:var(--text-dim); word-break:break-word;}
+  .spectator-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:16px;}
+  .wide .spectator-grid{ grid-template-columns:repeat(6,1fr);}
+  .spec-item{ text-align:center; transition:opacity .3s;}
+  .spec-item.dead{ opacity:0.42;}
+  .spec-item img{ width:100%; aspect-ratio:1/1; border-radius:8px; object-fit:cover; border:2px solid var(--gold);}
+  .spec-item.dead img{ filter:grayscale(1) brightness(0.5); border-color:var(--grey-dead);}
+  .spec-item .sname{ font-size:0.85rem; margin-top:6px;}
+  .counter{ text-align:center; margin:20px 0;}
+  .counter .big{ font-family:'Bebas Neue'; font-size:4rem; color:var(--gold); line-height:1;}
+  .counter .sub{ color:var(--text-dim);}
+  .toggle-row{ display:flex; gap:8px; margin-bottom:10px;}
+  .toggle-row button{ flex:1;}
+  .toggle-row button.active{ background:var(--gold); color:#1a1305; border-color:var(--gold);}
+  .row{ display:flex; gap:10px;}
+  .row .btn{ flex:1;}
+  .code-box{
+    text-align:center; font-family:'Bebas Neue'; font-size:2.4rem; letter-spacing:0.15em;
+    color:var(--gold); background:var(--panel-2); border:1px dashed var(--gold-dim);
+    padding:14px; border-radius:6px; margin:14px 0;
+  }
+  .qr{ display:block; margin:16px auto; border-radius:6px; background:#fff; padding:8px;}
+  .small-link{ text-align:center; word-break:break-all; color:var(--text-dim); font-size:0.8rem;}
+  .modal-bg{
+    position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex; align-items:center;
+    justify-content:center; z-index:50; padding:20px;
+  }
+  .modal{ background:var(--panel); border:1px solid var(--gold-dim); border-radius:8px; padding:24px; max-width:340px; width:100%;}
+  .ranking-row{ display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border);}
+  .ranking-row img{ width:42px; height:42px; border-radius:50%; object-fit:cover;}
+  .ranking-row .rn{ flex:1;}
+  .ranking-row .rv{ color:var(--gold); font-weight:600;}
+  .badge{ background:var(--panel-2); border:1px solid var(--gold-dim); border-radius:6px; padding:14px; margin-bottom:10px; display:flex; gap:12px; align-items:center;}
+  .badge img{ width:50px; height:50px; border-radius:50%; object-fit:cover; border:2px solid var(--gold);}
+  .badge .bt{ font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-dim);}
+  .badge .bn{ font-size:1.15rem;}
+  .err{ color:#e07a7a; font-size:0.85rem; margin-top:6px;}
+  .center{ text-align:center;}
+  .footer-nav{ margin-top:auto; text-align:center; padding-top:24px;}
+  .footer-nav a{ color:var(--text-dim); font-size:0.8rem; cursor:pointer; text-decoration:underline;}
+  .hint{ color:var(--text-dim); font-size:0.8rem; margin-top:4px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ==== CONFIGURA ESTO ANTES DE SUBIR EL ARCHIVO ====
+const CONFIG = {
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbyzHw8TNeC9-h9w2Noe4vEgfX6BeeFlzyj_0POYrOA_mVruieTDiGmL904VoDj4CV-i/exec", // termina en /exec
+  SECRET_KEY: "RGA1985",                 // la misma que pusiste en Code.gs
+  BASE_URL: ""  // ej: "https://automatizacionesrga.github.io/juegos/el-asesino-prototipo.html" — la URL donde subas este archivo
+};
+// ===================================================
+
+const state = {
+  screen: 'home',
+  code: null,
+  role: null,        // 'player' | 'admin' | 'spectator'
+  myPlayerId: null,
+  adminParticipaFlag: false,
+  spectatorMode: 'anon', // 'anon' | 'full'
+  photoData: null,
+  error: null,
+  pollTimer: null
+};
+
+// ---------- utilidades ----------
+function uid(){ return (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Math.random().toString(36).slice(2)); }
+function genCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let c=''; for(let i=0;i<5;i++) c += chars[Math.floor(Math.random()*chars.length)];
+  return c;
+}
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function derangement(ids){
+  if(ids.length<2) return ids.slice();
+  let perm, tries=0;
+  do{
+    perm = shuffle(ids);
+    tries++;
+    if(tries>500) break;
+  } while(perm.some((v,i)=>v===ids[i]));
+  return perm;
+}
+function resizeImage(file, maxSize=220){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let w=img.width, h=img.height;
+        if(w>h){ if(w>maxSize){ h=Math.round(h*maxSize/w); w=maxSize; } }
+        else { if(h>maxSize){ w=Math.round(w*maxSize/h); h=maxSize; } }
+        const canvas = document.createElement('canvas');
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg',0.72));
+      };
+      img.onerror=reject;
+      img.src=e.target.result;
+    };
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+async function loadGame(code){
+  try{
+    const url = `${CONFIG.APPS_SCRIPT_URL}?code=${encodeURIComponent(code)}&key=${encodeURIComponent(CONFIG.SECRET_KEY)}`;
+    const res = await fetch(url);
+    const json = await res.json();
+    if(json.error){ console.error('Error backend:', json.error); return null; }
+    return json.found ? JSON.parse(json.data) : null;
+  }catch(e){ console.error(e); return null; }
+}
+async function saveGame(code, obj){
+  try{
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'}, // evita el preflight CORS que Apps Script no soporta
+      body: JSON.stringify({ key: CONFIG.SECRET_KEY, code, data: JSON.stringify(obj) })
+    });
+    const json = await res.json();
+    return !!json.ok;
+  }catch(e){ console.error(e); return false; }
+}
+function shareUrlFor(code){
+  const base = CONFIG.BASE_URL || location.href.split('?')[0];
+  return base + '?p=' + code;
+}
+function copyLink(url){
+  navigator.clipboard.writeText(url).then(()=>alert('Enlace copiado')).catch(()=>alert(url));
+}
+
+// ---------- transiciones de estado tras poll ----------
+async function pollTick(){
+  if(!state.code) return;
+  const g = await loadGame(state.code);
+  if(!g) return;
+  state._game = g;
+  if(state.role==='player'){
+    const me = g.jugadores.find(j=>j.id===state.myPlayerId);
+    if(me){
+      if(g.estado==='finalizada'){ state.screen='ranking'; }
+      else if(me.estado==='muerto'){ if(state.screen!=='dead') state.screen='dead'; }
+      else if(g.estado==='en_curso' && state.screen==='lobby'){ state.screen='game'; }
+    }
+  } else if(state.role==='admin'){
+    if(g.estado==='finalizada'){ state.screen='ranking'; }
+    else if(g.estado==='en_curso' && state.screen==='lobby'){ state.screen='admin-panel'; }
+  } else if(state.role==='spectator'){
+    // sin transición automática de pantalla
+  }
+  render();
+}
+function startPolling(){
+  if(state.pollTimer) clearInterval(state.pollTimer);
+  state.pollTimer = setInterval(pollTick, 2500);
+}
+
+// ---------- acciones ----------
+async function actionCreateGame(participa){
+  state.code = genCode();
+  state.adminParticipaFlag = participa;
+  const g = {
+    code: state.code, estado:'inscripcion', adminParticipa: participa,
+    creadoEn: Date.now(), iniciadoEn:null, jugadores: []
+  };
+  await saveGame(state.code, g);
+  if(participa){
+    state.role='player';
+    state._pendingAdminJoin = true;
+    state.screen='join';
+  } else {
+    state.role='admin';
+    state.screen='created';
+  }
+  startPolling();
+  render();
+}
+
+async function actionGoJoinExisting(){
+  const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+  if(!code){ state.error='Introduce un código.'; render(); return; }
+  const g = await loadGame(code);
+  if(!g){ state.error='No existe ninguna partida con ese código.'; render(); return; }
+  if(g.estado!=='inscripcion'){ state.error='Esta partida ya ha empezado y no admite nuevos jugadores.'; render(); return; }
+  state.code = code; state.error=null; state.role='player'; state.screen='join';
+  startPolling();
+  render();
+}
+
+async function actionSubmitJoin(){
+  const nombre = document.getElementById('j-nombre').value.trim();
+  const accion = document.getElementById('j-accion').value.trim();
+  const pin = document.getElementById('j-pin').value.trim();
+  if(!nombre || !accion || !/^\d{4}$/.test(pin)){
+    state.error='Rellena nombre, acción, y un PIN de exactamente 4 números.';
+    render(); return;
+  }
+  const g = await loadGame(state.code);
+  if(!g){ state.error='La partida ya no existe.'; render(); return; }
+  const jugador = {
+    id: uid(), nombre, foto: state.photoData || null, accion, pin,
+    objetivoId:null, accionAsignada:null, estado:'vivo', numVictimas:0,
+    ordenEliminacion:null, tsPrimeraMuerte:null, esAdmin: !!state._pendingAdminJoin
+  };
+  g.jugadores.push(jugador);
+  await saveGame(state.code, g);
+  state.myPlayerId = jugador.id;
+  state.error=null;
+  state.screen='lobby';
+  render();
+}
+
+function handlePhotoInput(input){
+  const file = input.files[0];
+  if(!file) return;
+  resizeImage(file).then(data=>{
+    state.photoData = data;
+    const prev = document.getElementById('photo-preview');
+    if(prev) prev.src = data;
+  });
+}
+
+async function actionStartGame(){
+  const g = await loadGame(state.code);
+  if(!g || g.jugadores.length<4){ state.error='Necesitas al menos 4 jugadores.'; render(); return; }
+  const ids = g.jugadores.map(j=>j.id);
+  const objetivos = derangement(ids);
+  const accionesOrden = derangement(ids);
+  g.jugadores.forEach((j,i)=>{
+    j.objetivoId = objetivos[i];
+    const jugadorAccion = g.jugadores.find(p=>p.id===accionesOrden[i]);
+    j.accionAsignada = jugadorAccion.accion;
+  });
+  g.estado='en_curso'; g.iniciadoEn=Date.now();
+  await saveGame(state.code, g);
+  state._game = g;
+  state.screen = state.role==='admin' ? 'admin-panel' : 'game';
+  render();
+}
+
+function inheritFrom(g, killer, deadPlayer){
+  killer.objetivoId = deadPlayer.objetivoId;
+  killer.accionAsignada = deadPlayer.accionAsignada;
+  // evitar que el objetivo heredado sea uno mismo (cadena circular)
+  let guard = 0;
+  while(killer.objetivoId === killer.id && guard < g.jugadores.length){
+    const next = g.jugadores.find(p=>p.id===killer.objetivoId);
+    if(!next) break;
+    killer.objetivoId = next.objetivoId;
+    killer.accionAsignada = next.accionAsignada;
+    guard++;
+  }
+}
+
+async function actionConfirmKill(){
+  const pinInput = document.getElementById('kill-pin').value.trim();
+  const g = await loadGame(state.code);
+  const killer = g.jugadores.find(j=>j.id===state.myPlayerId);
+  const victim = g.jugadores.find(j=>j.id===killer.objetivoId);
+  if(!victim || victim.estado!=='vivo'){ state.modalError='Ese objetivo ya no está disponible.'; render(); return; }
+  if(victim.pin !== pinInput){ state.modalError='PIN incorrecto.'; render(); return; }
+  const vivosAntes = g.jugadores.filter(j=>j.estado==='vivo').length;
+  victim.estado='muerto';
+  victim.ordenEliminacion = (g.jugadores.filter(j=>j.ordenEliminacion).length)+1;
+  killer.numVictimas += 1;
+  if(!killer.tsPrimeraMuerte) killer.tsPrimeraMuerte = Date.now();
+  inheritFrom(g, killer, victim);
+  const vivos = g.jugadores.filter(j=>j.estado==='vivo');
+  if(vivos.length<=1){ g.estado='finalizada'; }
+  await saveGame(state.code, g);
+  state._game = g;
+  state.showKillModal=false; state.modalError=null;
+  state.screen = g.estado==='finalizada' ? 'ranking' : 'game';
+  render();
+}
+
+async function actionReassignAll(){
+  const g = await loadGame(state.code);
+  const vivos = g.jugadores.filter(j=>j.estado==='vivo');
+  if(vivos.length<3){ state.error='Necesitas al menos 3 jugadores vivos para reasignar.'; render(); return; }
+  const ids = vivos.map(j=>j.id);
+  const objetivos = derangement(ids);
+  const accionesOrden = derangement(ids);
+  vivos.forEach((j,i)=>{
+    j.objetivoId = objetivos[i];
+    const jugadorAccion = g.jugadores.find(p=>p.id===accionesOrden[i]);
+    j.accionAsignada = jugadorAccion.accion;
+  });
+  await saveGame(state.code, g);
+  state._game = g;
+  render();
+}
+
+async function actionOpenSpectator(){
+  const code = document.getElementById('spec-code-input').value.trim().toUpperCase();
+  if(!code){ state.error='Introduce el código de la partida.'; render(); return; }
+  const g = await loadGame(code);
+  if(!g){ state.error='No existe ninguna partida con ese código.'; render(); return; }
+  state.code=code; state.role='spectator'; state.error=null; state.screen='spectator';
+  startPolling(); pollTick();
+}
+
+function goHome(){
+  if(state.pollTimer) clearInterval(state.pollTimer);
+  Object.assign(state, {screen:'home', code:null, role:null, myPlayerId:null, error:null, photoData:null, _pendingAdminJoin:false});
+  render();
+}
+
+// ---------- render ----------
+function esc(s){ return (s||'').replace(/</g,'&lt;'); }
+function avatarSrc(foto){ return foto || 'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%231d1d22"/></svg>'); }
+
+function render(){
+  document.body.classList.toggle('wide', state.screen==='spectator' || state.screen==='admin-panel');
+  const app = document.getElementById('app');
+  let html = '';
+
+  if(state.screen==='home'){
+    html = `
+      <div class="top"><h1>EL ASESINO</h1><p>Un objetivo. Una misión. Un superviviente.</p></div>
+      <div class="card">
+        <button class="btn btn-gold" onclick="renderCreateConfig()">Crear partida</button>
+        <label>¿Ya tienes un código?</label>
+        <input type="text" id="join-code-input" placeholder="Código de partida" maxlength="5">
+        <button class="btn btn-outline" onclick="actionGoJoinExisting()">Unirme a la partida</button>
+        ${state.error? `<div class="err">${esc(state.error)}</div>`:''}
+      </div>
+      <div class="card">
+        <label>Ver el marcador en directo</label>
+        <input type="text" id="spec-code-input" placeholder="Código de partida" maxlength="5">
+        <button class="btn btn-outline" onclick="actionOpenSpectator()">Abrir modo espectador</button>
+      </div>`;
+  }
+
+  else if(state.screen==='create-config'){
+    html = `
+      <div class="top"><h1>NUEVA PARTIDA</h1></div>
+      <div class="card">
+        <p>¿Vas a jugar tú también, o solo vas a dirigir la partida?</p>
+        <button class="btn btn-gold" onclick="actionCreateGame(true)">Sí, yo también juego</button>
+        <button class="btn btn-outline" onclick="actionCreateGame(false)">No, solo organizo</button>
+        <p class="hint">Si juegas, no podrás ver el panel general en directo — jugarás a ciegas como el resto.</p>
+      </div>
+      <div class="footer-nav"><a onclick="goHome()">← Volver</a></div>`;
+  }
+
+  else if(state.screen==='created'){
+    const url = shareUrlFor(state.code);
+    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(url);
+    const waUrl = 'https://wa.me/?text=' + encodeURIComponent('Únete a la partida de El Asesino: ' + url);
+    html = `
+      <div class="top"><h1>PARTIDA CREADA</h1></div>
+      <div class="card center">
+        <div class="code-box">${state.code}</div>
+        <img class="qr" src="${qrUrl}" width="220" height="220" alt="QR de la partida">
+        <p class="small-link">${esc(url)}</p>
+        <p class="hint">Comparte el código, el QR o el enlace para que se unan desde su móvil.</p>
+        <div class="row">
+          <button class="btn btn-outline" onclick="copyLink('${url}')">Copiar enlace</button>
+          <a class="btn btn-outline" href="${waUrl}" target="_blank" rel="noopener">WhatsApp</a>
+        </div>
+        <button class="btn btn-gold" onclick="state.screen='lobby'; render();">Ir a la sala de espera</button>
+      </div>
+      <div class="footer-nav"><a onclick="goHome()">← Cancelar</a></div>`;
+  }
+
+  else if(state.screen==='join'){
+    html = `
+      <div class="top"><h1>ÚNETE</h1><p>Partida ${esc(state.code)}</p></div>
+      <div class="card">
+        <div class="avatar-wrap"><img id="photo-preview" class="avatar" src="${avatarSrc(state.photoData)}"></div>
+        <label>Tu foto</label>
+        <input type="file" accept="image/*" capture="user" onchange="handlePhotoInput(this)">
+        <label>Tu nombre</label>
+        <input type="text" id="j-nombre" placeholder="Nombre visible para los demás">
+        <label>Tu acción para matar</label>
+        <input type="text" id="j-accion" placeholder="Ej: que te dé un masaje">
+        <label>Tu PIN secreto (4 números)</label>
+        <input type="tel" id="j-pin" maxlength="4" placeholder="0000">
+        <p class="hint">Dale este PIN solo a quien consiga matarte, en el momento en que lo logre.</p>
+        ${state.error? `<div class="err">${esc(state.error)}</div>`:''}
+        <button class="btn btn-gold" onclick="actionSubmitJoin()">Entrar en la partida</button>
+      </div>`;
+  }
+
+  else if(state.screen==='lobby'){
+    const g = state._game;
+    const jugadores = g ? g.jugadores : [];
+    const esAdmin = state.role==='admin';
+    html = `
+      <div class="top"><h1>SALA DE ESPERA</h1><p>Partida ${esc(state.code)} · ${jugadores.length} unidos</p></div>
+      <div class="card">
+        <div class="lobby-grid">
+          ${jugadores.map(j=>`
+            <div class="lobby-item">
+              <img src="${avatarSrc(j.foto)}">
+              <div class="lname">${esc(j.nombre)}</div>
+            </div>`).join('')}
+        </div>
+        ${jugadores.length===0? '<p class="hint center">Aún no se ha unido nadie.</p>':''}
+      </div>
+      ${esAdmin? `
+        <div class="card">
+          <div class="row">
+            <button class="btn btn-outline" onclick="copyLink('${shareUrlFor(state.code)}')">Copiar enlace</button>
+            <a class="btn btn-outline" href="https://wa.me/?text=${encodeURIComponent('Únete a la partida de El Asesino: '+shareUrlFor(state.code))}" target="_blank" rel="noopener">WhatsApp</a>
+          </div>
+          <button class="btn btn-gold" ${jugadores.length<4?'disabled':''} onclick="actionStartGame()">Iniciar partida</button>
+          <p class="hint">Se necesitan al menos 4 jugadores.</p>
+          ${state.error? `<div class="err">${esc(state.error)}</div>`:''}
+        </div>` : `<p class="hint center">Esperando a que el organizador inicie la partida…</p>`}
+      <div class="footer-nav"><a onclick="goHome()">Salir</a></div>`;
+  }
+
+  else if(state.screen==='game'){
+    const g = state._game;
+    const me = g.jugadores.find(j=>j.id===state.myPlayerId);
+    const target = g.jugadores.find(j=>j.id===me.objetivoId);
+    const vivos = g.jugadores.filter(j=>j.estado==='vivo').length;
+    html = `
+      <div class="top"><h1>TU MISIÓN</h1><p class="tag">Quedan ${vivos} en juego</p></div>
+      <div class="card">
+        <div class="avatar-wrap"><img class="avatar" src="${avatarSrc(target.foto)}"></div>
+        <div class="name">${esc(target.nombre)}</div>
+        <div class="mission-box">${esc(me.accionAsignada)}</div>
+        <button class="btn btn-blood" onclick="state.showKillModal=true; state.modalError=null; render();">He completado mi misión</button>
+      </div>
+      <div class="card center">
+        <p class="hint">Víctimas conseguidas: ${me.numVictimas}</p>
+      </div>
+      <div class="footer-nav"><a onclick="goHome()">Salir</a></div>
+    `;
+    if(state.showKillModal){
+      html += `
+        <div class="modal-bg">
+          <div class="modal">
+            <h3 style="margin-bottom:10px;">Confirmar eliminación</h3>
+            <p class="hint">Pide a ${esc(target.nombre)} su PIN de 4 dígitos.</p>
+            <input type="tel" id="kill-pin" maxlength="4" placeholder="0000">
+            ${state.modalError? `<div class="err">${esc(state.modalError)}</div>`:''}
+            <button class="btn btn-gold" onclick="actionConfirmKill()">Confirmar</button>
+            <button class="btn btn-outline" onclick="state.showKillModal=false; render();">Cancelar</button>
+          </div>
+        </div>`;
+    }
+  }
+
+  else if(state.screen==='dead'){
+    const g = state._game;
+    const me = g.jugadores.find(j=>j.id===state.myPlayerId);
+    const vivos = g.jugadores.filter(j=>j.estado==='vivo').length;
+    html = `
+      <div class="top"><h1>HAS CAÍDO</h1></div>
+      <div class="card center">
+        <div class="avatar-wrap dead"><img class="avatar dead" src="${avatarSrc(me.foto)}"><div class="skull">💀</div></div>
+        <div class="name dead">${esc(me.nombre)}</div>
+        <p class="hint">Quedan ${vivos} jugadores en la arena. Sigue la partida desde el modo espectador.</p>
+        <button class="btn btn-outline" onclick="actionOpenSpectatorFromInside()">Ver marcador</button>
+      </div>
+      <div class="footer-nav"><a onclick="goHome()">Salir</a></div>`;
+  }
+
+  else if(state.screen==='admin-panel'){
+    const g = state._game;
+    const vivos = g.jugadores.filter(j=>j.estado==='vivo');
+    const muertos = g.jugadores.filter(j=>j.estado==='muerto');
+    html = `
+      <div class="top"><h1>PANEL DEL ORGANIZADOR</h1><p>Partida ${esc(state.code)} · ${vivos.length} vivos / ${g.jugadores.length}</p></div>
+      <div class="card">
+        <button class="btn btn-gold" onclick="actionReassignAll()">Reasignar todos los objetivos</button>
+        <p class="hint">Reparte de nuevo objetivo y acción solo entre los jugadores vivos.</p>
+        ${state.error? `<div class="err">${esc(state.error)}</div>`:''}
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:10px;">Jugadores</h3>
+        <div class="spectator-grid">
+          ${g.jugadores.map(j=>`
+            <div class="spec-item ${j.estado==='muerto'?'dead':''}">
+              <img src="${avatarSrc(j.foto)}">
+              <div class="sname">${esc(j.nombre)}${j.esAdmin?' 👑':''}</div>
+              <div class="hint">${j.numVictimas} víctimas</div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="footer-nav"><a onclick="goHome()">Salir</a></div>`;
+  }
+
+  else if(state.screen==='spectator'){
+    const g = state._game;
+    const vivos = g.jugadores.filter(j=>j.estado==='vivo').length;
+    html = `
+      <div class="top"><h1>MARCADOR EN VIVO</h1><p>Partida ${esc(state.code)}</p></div>
+      <div class="toggle-row">
+        <button class="btn ${state.spectatorMode==='anon'?'active':''}" onclick="state.spectatorMode='anon'; render();">Anonimizado</button>
+        <button class="btn ${state.spectatorMode==='full'?'active':''}" onclick="state.spectatorMode='full'; render();">Completo</button>
+      </div>
+      ${state.spectatorMode==='anon' ? `
+        <div class="counter">
+          <div class="big">${vivos} / ${g.jugadores.length}</div>
+          <div class="sub">supervivientes en juego</div>
+        </div>` : `
+        <div class="spectator-grid">
+          ${g.jugadores.map(j=>`
+            <div class="spec-item ${j.estado==='muerto'?'dead':''}">
+              <img src="${avatarSrc(j.foto)}">
+              <div class="sname">${esc(j.nombre)}</div>
+            </div>`).join('')}
+        </div>`}
+      <div class="footer-nav"><a onclick="goHome()">Salir</a></div>`;
+  }
+
+  else if(state.screen==='ranking'){
+    const g = state._game;
+    const superviviente = g.jugadores.find(j=>j.estado==='vivo');
+    const conKills = g.jugadores.filter(j=>j.numVictimas>0);
+    const veloz = conKills.slice().sort((a,b)=>a.tsPrimeraMuerte-b.tsPrimeraMuerte)[0];
+    const serie = g.jugadores.slice().sort((a,b)=>b.numVictimas-a.numVictimas)[0];
+    const tabla = g.jugadores.slice().sort((a,b)=> b.numVictimas - a.numVictimas || (a.ordenEliminacion||99)-(b.ordenEliminacion||99));
+    html = `
+      <div class="top"><h1>FIN DE LA PARTIDA</h1></div>
+      ${superviviente? `
+      <div class="badge">
+        <img src="${avatarSrc(superviviente.foto)}">
+        <div><div class="bt">🏆 Superviviente</div><div class="bn">${esc(superviviente.nombre)}</div></div>
+      </div>`:''}
+      ${veloz? `
+      <div class="badge">
+        <img src="${avatarSrc(veloz.foto)}">
+        <div><div class="bt">⚡ Asesino más veloz</div><div class="bn">${esc(veloz.nombre)}</div></div>
+      </div>`:''}
+      ${serie && serie.numVictimas>0 ? `
+      <div class="badge">
+        <img src="${avatarSrc(serie.foto)}">
+        <div><div class="bt">🔪 Asesino en serie</div><div class="bn">${esc(serie.nombre)} · ${serie.numVictimas} víctimas</div></div>
+      </div>`:''}
+      <div class="card">
+        <h3 style="margin-bottom:6px;">Clasificación</h3>
+        ${tabla.map(j=>`
+          <div class="ranking-row">
+            <img src="${avatarSrc(j.foto)}">
+            <div class="rn">${esc(j.nombre)} ${j.estado==='vivo'?'':'💀'}</div>
+            <div class="rv">${j.numVictimas} víctimas</div>
+          </div>`).join('')}
+      </div>
+      <div class="footer-nav"><a onclick="goHome()">Volver al inicio</a></div>`;
+  }
+
+  app.innerHTML = html;
+}
+
+function renderCreateConfig(){ state.screen='create-config'; render(); }
+function actionOpenSpectatorFromInside(){
+  state.role='spectator'; state.screen='spectator'; state.myPlayerId=null; render();
+}
+
+(function initFromLink(){
+  const params = new URLSearchParams(location.search);
+  const p = params.get('p');
+  if(!p) return;
+  state.code = p.toUpperCase();
+  state.role = 'player';
+  (async ()=>{
+    const g = await loadGame(state.code);
+    if(g && g.estado==='inscripcion'){
+      state.screen='join';
+      startPolling();
+    } else if(g){
+      state.error='Esta partida ya ha empezado y no admite nuevos jugadores.';
+    } else {
+      state.error='No existe ninguna partida con ese código.';
+    }
+    render();
+  })();
+})();
+
+render();
+</script>
+</body>
+</html>
