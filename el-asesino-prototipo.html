@@ -164,7 +164,7 @@
     animation: confettiFall 2.2s ease-in forwards;
   }
   .stars-row{ display:flex; gap:8px; justify-content:center; margin:12px 0;}
-  .star-btn{ font-size:2rem; cursor:pointer; color:var(--border); transition:color .15s, transform .15s;}
+  .star-btn{ font-size:2rem; cursor:pointer; color:var(--grey-dead); transition:color .15s, transform .15s;}
   .star-btn.filled{ color:var(--gold); transform:scale(1.1);}
   .winner-stage{
     position:relative; width:100%; max-width:280px; aspect-ratio:1/1;
@@ -201,7 +201,7 @@
 <script>
 // ==== CONFIGURA ESTO ANTES DE SUBIR EL ARCHIVO ====
 const CONFIG = {
-  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbyzHw8TNeC9-h9w2Noe4vEgfX6BeeFlzyj_0POYrOA_mVruieTDiGmL904VoDj4CV-i/exec", // termina en /exec
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxb6jclRtv1zV-HExI4qHAZGIJJ1QTBqvTyC2gI6DEVnUlF5VwyER6gofpyB9l2uTUA_w/exec", // termina en /exec
   SECRET_KEY: "RGA1985",                 // la misma que pusiste en Code.gs
   BASE_URL: ""  // ej: "https://automatizacionesrga.github.io/juegos/el-asesino-prototipo.html" — la URL donde subas este archivo
 };
@@ -224,6 +224,7 @@ function playTone(freq, duration, type, vol){
 function sfxKill(){ playTone(180,0.15,'square',0.2); setTimeout(()=>playTone(120,0.15,'square',0.2),90); }
 function sfxReassign(){ playTone(300,0.12,'sine',0.15); setTimeout(()=>playTone(220,0.12,'sine',0.15),100); setTimeout(()=>playTone(500,0.18,'sine',0.15),200); }
 function sfxFanfare(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>playTone(f,0.28,'triangle',0.18), i*140)); }
+function sfxNotify(){ playTone(660,0.12,'sine',0.15); setTimeout(()=>playTone(880,0.12,'sine',0.15),120); }
 document.addEventListener('click', function primeAudio(){
   try{ (window._audioCtx || (window._audioCtx = new (window.AudioContext||window.webkitAudioContext)())).resume(); }catch(e){}
   document.removeEventListener('click', primeAudio);
@@ -374,12 +375,25 @@ function copyLink(url){
 }
 
 // ---------- transiciones de estado tras poll ----------
+function checkNuevasSolicitudes(g){
+  const soyOrganizador = state.role==='admin' || (state.role==='player' && g.jugadores.some(j=>j.id===state.myPlayerId && j.esAdmin));
+  if(!soyOrganizador) return;
+  const pendientes = (g.solicitudesCambio||[]).filter(s=>s.estado==='pendiente');
+  state._solicitudesVistas = state._solicitudesVistas || {};
+  const nuevas = pendientes.filter(s => !state._solicitudesVistas[s.jugadorId+':'+s.ts]);
+  if(nuevas.length){
+    nuevas.forEach(s => state._solicitudesVistas[s.jugadorId+':'+s.ts] = true);
+    sfxNotify();
+  }
+}
+
 async function pollTick(){
   if(!state.code) return;
   if(state.screen==='join' || state.showKillModal) return; // no interrumpir mientras el usuario está escribiendo
   const g = await loadGame(state.code);
   if(!g) return;
   state._game = g;
+  checkNuevasSolicitudes(g);
   ensurePhotos(g);
   if(state.role==='player'){
     const me = g.jugadores.find(j=>j.id===state.myPlayerId);
@@ -404,7 +418,10 @@ async function pollTick(){
     }
     else if(g.estado==='en_curso' && state.screen==='lobby'){ state.screen='admin-panel'; }
   } else if(state.role==='spectator'){
-    // sin transición automática de pantalla
+    if(g.estado==='finalizada'){
+      if(state.screen!=='ranking'){ state.screen='ranking'; sfxFanfare(); }
+      if(state.pollTimer) clearInterval(state.pollTimer);
+    }
   }
   render();
 }
@@ -414,7 +431,7 @@ function startPolling(){
 }
 
 // ---------- acciones ----------
-async function actionCreateGame(participa, modoEspectador, tipoEvento){
+async function actionCreateGame(participa, modoEspectador, tipoEvento, modoVisibilidad){
   let code = genCode();
   for(let i=0;i<5;i++){
     const existente = await loadGame(code);
@@ -423,6 +440,7 @@ async function actionCreateGame(participa, modoEspectador, tipoEvento){
   }
   const g = {
     code, estado:'inscripcion', adminParticipa: participa, modoEspectador: modoEspectador || 'anon',
+    modoVisibilidadObjetivo: modoVisibilidad || 'visible',
     tipoEvento: tipoEvento || null, creadorDeviceId: getDeviceId(),
     creadoEn: Date.now(), iniciadoEn:null, jugadores: [], ultimaReasignacion:null, aperturasInscripcion:0
   };
@@ -440,9 +458,31 @@ async function actionCreateGame(participa, modoEspectador, tipoEvento){
   render();
 }
 
+function hasSeenTutorial(){
+  try{ return localStorage.getItem('elasesino-tutorial-visto')==='1'; }catch(e){ return false; }
+}
+function markTutorialSeen(){
+  try{ localStorage.setItem('elasesino-tutorial-visto','1'); }catch(e){}
+}
 function goToJoin(){
   const profile = loadProfile();
   if(!state.photoData && profile.foto) state.photoData = profile.foto;
+  if(!hasSeenTutorial()){
+    state.tutorialStep = 0;
+    state.screen = 'tutorial';
+    render();
+  } else {
+    state.screen = 'join';
+    render();
+    callAction('trackOpen', { code: state.code });
+  }
+}
+function tutorialNav(delta){
+  state.tutorialStep = Math.max(0, Math.min(2, (state.tutorialStep||0)+delta));
+  render();
+}
+function finishTutorial(){
+  markTutorialSeen();
   state.screen = 'join';
   render();
   callAction('trackOpen', { code: state.code });
@@ -563,6 +603,24 @@ async function actionReassignAll(){
   render();
 }
 
+async function actionSolicitarCambio(){
+  const result = await callAction('solicitarCambio', { code: state.code, jugadorId: state.myPlayerId });
+  if(!result.ok){ alert(result.error==='ya tienes una solicitud pendiente' ? 'Ya has pedido un cambio, espera a que el organizador lo revise.' : 'No se ha podido enviar la solicitud.'); return; }
+  state._game = result.data;
+  render();
+}
+
+async function actionResolverCambio(jugadorId, aprobar){
+  const result = await callAction('resolverCambio', { code: state.code, jugadorId, aprobar });
+  if(result.ok){ state._game = result.data; render(); }
+}
+
+async function actionToggleVisibilidad(){
+  const nuevo = state._game.modoVisibilidadObjetivo==='oculto' ? 'visible' : 'oculto';
+  const result = await callAction('setVisibilidad', { code: state.code, modo: nuevo });
+  if(result.ok){ state._game = result.data; render(); }
+}
+
 async function actionToggleEspectadorMode(){
   const orden = ['nada','anon','completo'];
   const actual = orden.indexOf(state._game.modoEspectador);
@@ -608,6 +666,18 @@ async function actionRecoverSubmit(){
   ensurePhotos(result.data);
 }
 
+function revealTarget(){
+  state.showTarget = true;
+  render();
+  if(state._targetTimer) clearTimeout(state._targetTimer);
+  state._targetTimer = setTimeout(()=>{ state.showTarget=false; render(); }, 6000);
+}
+function hideTarget(){
+  if(state._targetTimer) clearTimeout(state._targetTimer);
+  state.showTarget = false;
+  render();
+}
+
 function revealMyPin(){
   state.showMyPin = true;
   render();
@@ -617,7 +687,7 @@ function revealMyPin(){
 function goHome(){
   if(state.pollTimer) clearInterval(state.pollTimer);
   clearSession();
-  Object.assign(state, {screen:'home', code:null, role:null, myPlayerId:null, error:null, photoData:null, _pendingAdminJoin:false, rankingSlide:0, showMyPin:false, showAccionHint:false, _lastTargetId:null, _deadAnimated:false, ratingSubmitted:false, ratingValue:0, showEmailForm:false, emailSent:false, sendingEmail:false, cfgTipoEvento:undefined});
+  Object.assign(state, {screen:'home', code:null, role:null, myPlayerId:null, error:null, photoData:null, _pendingAdminJoin:false, rankingSlide:0, showMyPin:false, showAccionHint:false, _lastTargetId:null, _deadAnimated:false, ratingSubmitted:false, ratingValue:0, showEmailForm:false, emailSent:false, sendingEmail:false, cfgTipoEvento:undefined, cfgVisibilidad:undefined, showTarget:false, showSolicitudesModal:false});
   render();
 }
 
@@ -634,6 +704,9 @@ function avatarSrc(foto){ return foto || 'data:image/svg+xml;utf8,'+encodeURICom
 
 function render(){
   document.body.classList.toggle('wide', state.screen==='spectator' || state.screen==='admin-panel' || state.screen==='panel');
+  const renderKey = state.screen + ':' + (state.rankingSlide||0);
+  const cambioDeVista = state._lastRenderKey !== renderKey;
+  state._lastRenderKey = renderKey;
   const app = document.getElementById('app');
   let html = '';
 
@@ -701,6 +774,17 @@ function render(){
         <p class="hint">Esto es independiente de ti como organizador: puedes cambiarlo en cualquier momento desde tu panel.</p>
       </div>
       <div class="card">
+        <p style="font-size:0.95rem;">¿Cómo se muestra el objetivo en la pantalla de cada jugador?</p>
+        <div class="row">
+          <button class="btn ${state.cfgVisibilidad==='visible'?'btn-gold':'btn-outline'}" onclick="state.cfgVisibilidad='visible'; render();">Siempre visible</button>
+          <button class="btn ${state.cfgVisibilidad==='oculto'?'btn-gold':'btn-outline'}" onclick="state.cfgVisibilidad='oculto'; render();">Oculto (privacidad)</button>
+        </div>
+        <p class="hint">
+          <strong>Siempre visible:</strong> la foto y la misión se ven en todo momento en pantalla.<br>
+          <strong>Oculto:</strong> la pantalla no muestra nada por defecto; cada jugador pulsa un botón para verlo unos segundos y se oculta solo — ideal para que nadie a tu lado pueda verlo de reojo.
+        </p>
+      </div>
+      <div class="card">
         <p style="font-size:0.9rem;">¿Qué tipo de evento es? <span style="color:var(--text-dim); font-weight:400;">(opcional)</span></p>
         <div class="row">
           <button class="btn ${state.cfgTipoEvento==='fiesta'?'btn-gold':'btn-outline'}" style="font-size:0.82rem;" onclick="state.cfgTipoEvento='fiesta'; render();">Fiesta</button>
@@ -709,7 +793,7 @@ function render(){
         </div>
       </div>
       <div class="card center">
-        <button class="btn btn-gold" ${(p===undefined||!m)?'disabled':''} onclick="actionCreateGame(state.cfgParticipa, state.cfgModoEspectador, state.cfgTipoEvento)">Crear partida</button>
+        <button class="btn btn-gold" ${(p===undefined||!m||!state.cfgVisibilidad)?'disabled':''} onclick="actionCreateGame(state.cfgParticipa, state.cfgModoEspectador, state.cfgTipoEvento, state.cfgVisibilidad)">Crear partida</button>
       </div>
       <div class="footer-nav"><a onclick="goHome()">← Volver</a></div>`;
   }
@@ -734,10 +818,32 @@ function render(){
       <div class="footer-nav"><a onclick="goHome()">← Cancelar</a></div>`;
   }
 
+  else if(state.screen==='tutorial'){
+    const step = state.tutorialStep||0;
+    const pasos = [
+      { titulo:'¿CÓMO FUNCIONA?', texto:'Vas a recibir un objetivo: otra persona de la partida. Tu misión es conseguir que ESA PERSONA haga, sin sospechar, una acción secreta que tú le asignarás.' },
+      { titulo:'CUANDO LO CONSIGUES', texto:'En cuanto tu objetivo hace la acción, queda eliminado. Heredas automáticamente a quién estaba cazando él y con qué acción — y sigues cazando. Al final solo queda un superviviente.' },
+      { titulo:'ELIGE BIEN TU ACCIÓN', texto:'La acción que propongas se la asignaremos a otra persona para que te la haga a TI. Que sea realista y fácil de pedir sin levantar sospechas — así el juego es mucho más divertido para todos.' }
+    ];
+    const p = pasos[step];
+    html = `
+      <div class="top"><h1>ANTES DE EMPEZAR</h1></div>
+      <div class="card center slide-enter">
+        <h2 style="color:var(--gold); font-size:1.6rem; margin-bottom:10px;">${p.titulo}</h2>
+        <p class="hint" style="font-size:1rem; line-height:1.5;">${p.texto}</p>
+      </div>
+      <div class="step-indicator">Paso ${step+1} de 3</div>
+      <div class="slide-nav">
+        ${step>0? `<button class="btn btn-outline" onclick="tutorialNav(-1)">← Anterior</button>`:''}
+        ${step<2? `<button class="btn btn-gold" onclick="tutorialNav(1)">Siguiente →</button>` : `<button class="btn btn-gold" onclick="finishTutorial()">Entendido, ¡vamos!</button>`}
+      </div>
+      <div class="footer-nav"><a onclick="goHome()">← Cancelar</a></div>`;
+  }
+
   else if(state.screen==='join'){
     const profile = loadProfile();
     html = `
-      <div class="top"><h1>ÚNETE</h1><p>Partida ${esc(state.code)}</p></div>
+      <div class="top"><h1>ÚNETE</h1><p>Partida ${esc(state.code)} · <a onclick="state.tutorialStep=0; state.screen='tutorial'; render();" style="color:var(--gold); cursor:pointer; text-decoration:underline;">¿Cómo se juega?</a></p></div>
       <div class="card">
         <div class="avatar-wrap"><img id="photo-preview" class="avatar" src="${avatarSrc(state.photoData)}"></div>
         <label>Tu rostro para la arena</label>
@@ -800,16 +906,34 @@ function render(){
     const vivos = g.jugadores.filter(j=>j.estado==='vivo').length;
     const esObjetivoNuevo = state._lastTargetId !== target.id;
     state._lastTargetId = target.id;
+    const modoOculto = g.modoVisibilidadObjetivo==='oculto';
+    if(esObjetivoNuevo) state.showTarget = false;
+    const mostrarAhora = !modoOculto || state.showTarget;
+    const solicitudPendiente = (g.solicitudesCambio||[]).some(s=>s.jugadorId===me.id && s.estado==='pendiente');
     html = `
       <div class="code-pill">Partida: ${esc(state.code)}</div>
       <div class="top"><h1>TU MISIÓN</h1><p class="tag">Quedan ${vivos} en juego</p></div>
       <div class="card">
-        <div class="mission-photo ${esObjetivoNuevo?'reveal':''}"><img src="${avatarSrc(photoOf(target.id))}"></div>
-        <div class="name">${esc(target.nombre)}</div>
-        <p class="tag" style="margin-top:14px;">Consigue que tu objetivo:</p>
-        <div class="mission-box">${esc(me.accionAsignada)}</div>
-        <button class="btn btn-blood" onclick="state.showKillModal=true; state.modalError=null; render();">He completado mi misión</button>
+        ${mostrarAhora ? `
+          <div class="mission-photo ${esObjetivoNuevo?'reveal':''}"><img src="${avatarSrc(photoOf(target.id))}"></div>
+          <div class="name">${esc(target.nombre)}</div>
+          <p class="tag" style="margin-top:14px;">Consigue que tu objetivo:</p>
+          <div class="mission-box">${esc(me.accionAsignada)}</div>
+          ${modoOculto? `<button class="btn btn-outline" onclick="hideTarget()">Ocultar ahora</button>` : ''}
+          <p class="hint" style="text-align:center; margin-top:10px;">
+            ${solicitudPendiente
+              ? 'Solicitud enviada — esperando que el organizador la revise.'
+              : `¿Misión imposible? <a onclick="actionSolicitarCambio()" style="color:var(--gold); cursor:pointer; text-decoration:underline;">Pedir un cambio</a>`}
+          </p>
+        ` : `
+          <p class="hint" style="text-align:center; padding:20px 0;">Tu objetivo está oculto por privacidad — nadie a tu alrededor podrá verlo sin querer.</p>
+          <button class="btn btn-gold" onclick="revealTarget()">Ver mi objetivo</button>
+        `}
       </div>
+      ${mostrarAhora? `
+      <div class="card center">
+        <button class="btn btn-blood" onclick="state.showKillModal=true; state.modalError=null; render();">He completado mi misión</button>
+      </div>` : ''}
       <div class="card center">
         <p class="hint clickable-hint" onclick="state.showVictimList=!state.showVictimList; render();">Víctimas conseguidas: ${me.numVictimas} ${me.numVictimas>0?(state.showVictimList?'▲':'▼'):''}</p>
         ${state.showVictimList && me.victimasLog && me.victimasLog.length ? `
@@ -823,8 +947,28 @@ function render(){
           </div>` : ''}
         ${state.showMyPin? `<div class="code-box" style="font-size:1.8rem; margin-top:12px;">${esc(me.pin)}</div>` : `<button class="btn btn-outline" onclick="revealMyPin()">¿Olvidaste tu PIN?</button>`}
       </div>
-      <div class="footer-nav"><a onclick="goHome()">Salir</a></div>
+      <div class="footer-nav">
+        ${me.esAdmin ? `<a onclick="state.showSolicitudesModal=true; render();">Solicitudes de cambio${(g.solicitudesCambio||[]).filter(s=>s.estado==='pendiente').length? ' ('+(g.solicitudesCambio||[]).filter(s=>s.estado==='pendiente').length+')':''}</a> · ` : ''}
+        <a onclick="goHome()">Salir</a>
+      </div>
     `;
+    if(state.showSolicitudesModal){
+      const pendientes = (g.solicitudesCambio||[]).filter(s=>s.estado==='pendiente');
+      html += `
+        <div class="modal-bg">
+          <div class="modal">
+            <h3 style="margin-bottom:10px;">Solicitudes de cambio de misión</h3>
+            ${pendientes.length===0? `<p class="hint">No hay solicitudes pendientes.</p>` : pendientes.map(s=>`
+              <div class="ranking-row">
+                <div class="rn">${esc(s.nombre)}</div>
+                <button class="btn btn-gold" style="flex:none; width:auto; padding:8px 14px;" onclick="actionResolverCambio('${s.jugadorId}', true)">Aprobar</button>
+                <button class="btn btn-outline" style="flex:none; width:auto; padding:8px 14px;" onclick="actionResolverCambio('${s.jugadorId}', false)">Rechazar</button>
+              </div>
+            `).join('')}
+            <button class="btn btn-outline" style="margin-top:14px;" onclick="state.showSolicitudesModal=false; render();">Cerrar</button>
+          </div>
+        </div>`;
+    }
     if(state.showKillModal){
       html += `
         <div class="modal-bg">
@@ -891,6 +1035,23 @@ function render(){
         <p class="hint">Ese enlace puedes abrirlo en un ordenador o proyectarlo en una pantalla para que todos vean cómo va la partida en directo.</p>
       </div>
       <div class="card">
+        <p class="hint">Visibilidad del objetivo en el móvil de cada jugador: <strong>${g.modoVisibilidadObjetivo==='oculto'?'Oculto (privacidad)':'Siempre visible'}</strong></p>
+        <button class="btn btn-outline" onclick="actionToggleVisibilidad()">Cambiar a ${g.modoVisibilidadObjetivo==='oculto'?'siempre visible':'oculto'}</button>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:10px;">Solicitudes de cambio de misión</h3>
+        ${(function(){
+          const pendientes = (g.solicitudesCambio||[]).filter(s=>s.estado==='pendiente');
+          if(pendientes.length===0) return `<p class="hint">No hay solicitudes pendientes.</p>`;
+          return pendientes.map(s=>`
+            <div class="ranking-row">
+              <div class="rn">${esc(s.nombre)}</div>
+              <button class="btn btn-gold" style="flex:none; width:auto; padding:8px 14px;" onclick="actionResolverCambio('${s.jugadorId}', true)">Aprobar</button>
+              <button class="btn btn-outline" style="flex:none; width:auto; padding:8px 14px;" onclick="actionResolverCambio('${s.jugadorId}', false)">Rechazar</button>
+            </div>`).join('');
+        })()}
+      </div>
+      <div class="card">
         <h3 style="margin-bottom:10px;">Jugadores</h3>
         <div class="spectator-grid">
           ${g.jugadores.map(j=>`
@@ -951,11 +1112,12 @@ function render(){
         <div class="stat-grid">
           <div class="stat-card"><div class="num">${s.totalPartidas}</div><div class="lbl">Partidas creadas</div></div>
           <div class="stat-card"><div class="num">${s.totalJugadores}</div><div class="lbl">Jugadores totales</div></div>
-          <div class="stat-card"><div class="num">${s.mediaJugadoresPorPartida}</div><div class="lbl">Media por partida</div></div>
+          <div class="stat-card"><div class="num">${s.mediaJugadoresPorPartida}</div><div class="lbl">Jugadores de media (por partida)</div></div>
+          <div class="stat-card"><div class="num">${s.mediaJugadoresPorPartidaCompletada}</div><div class="lbl">Jugadores de media (partidas completadas)</div></div>
           <div class="stat-card"><div class="num">${s.partidasCompletadas}</div><div class="lbl">Partidas completadas</div></div>
           <div class="stat-card"><div class="num">${s.partidasEnCurso}</div><div class="lbl">En curso ahora</div></div>
           <div class="stat-card"><div class="num">${s.partidasSinIniciar}</div><div class="lbl">Creadas sin iniciar</div></div>
-          <div class="stat-card"><div class="num">${s.duracionMediaMinutos}</div><div class="lbl">Min. de media por partida</div></div>
+          <div class="stat-card"><div class="num">${s.duracionMediaMinutos}</div><div class="lbl">Minutos de duración media</div></div>
           <div class="stat-card"><div class="num">${s.totalAperturasInscripcion}</div><div class="lbl">Aperturas del formulario</div></div>
           <div class="stat-card"><div class="num">${s.organizadoresUnicos}</div><div class="lbl">Organizadores únicos</div></div>
           <div class="stat-card"><div class="num">${s.organizadoresRecurrentes}</div><div class="lbl">Organizadores recurrentes</div></div>
@@ -1081,15 +1243,17 @@ function render(){
     } else {
       const nombreValorador = (function(){
         if(state.role==='player'){ const me=g.jugadores.find(j=>j.id===state.myPlayerId); return me? me.nombre : 'Jugador'; }
+        if(state.role==='spectator') return 'Espectador';
         return 'Organizador';
       })();
-      let resumenTexto = 'Resultados de El Asesino:\n\n';
-      if(superviviente) resumenTexto += `Superviviente: ${superviviente.nombre}\n`;
-      if(veloz) resumenTexto += `Asesino mas rapido: ${veloz.nombre}\n`;
-      if(serie) resumenTexto += `Asesino en serie: ${serie.nombre} (${serie.numVictimas} victimas)\n`;
-      else if(serieDuo) resumenTexto += `Asesinos en serie: ${serieDuo.map(j=>j.nombre).join(' y ')}\n`;
-      resumenTexto += '\nClasificacion:\n';
-      tabla.forEach((j,i)=>{ resumenTexto += `${i+1}. ${j.nombre} - ${j.numVictimas} victimas\n`; });
+      let resumenTexto = '🎭 ¡LA PARTIDA HA TERMINADO! 🎭\n\nEstos son los resultados de nuestra partida a El Asesino:\n\n';
+      if(superviviente) resumenTexto += `🏆 Superviviente: ${superviviente.nombre}\n`;
+      if(veloz) resumenTexto += `⚡ Asesino más rápido: ${veloz.nombre}\n`;
+      if(serie) resumenTexto += `🔪 Asesino en serie: ${serie.nombre} (${serie.numVictimas} víctimas)\n`;
+      else if(serieDuo) resumenTexto += `🔪 Asesinos en serie: ${serieDuo.map(j=>j.nombre).join(' y ')}\n`;
+      resumenTexto += '\n📋 Clasificación completa:\n';
+      tabla.forEach((j,i)=>{ resumenTexto += `${i+1}. ${j.nombre} - ${j.numVictimas} víctimas\n`; });
+      resumenTexto += '\n¿Os apuntáis a la revancha? 😏\nCrea tu propia partida gratis en: https://www.gotelin.com/juegos';
       state._lastResumenTexto = resumenTexto;
       const waResumenUrl = 'https://wa.me/?text=' + encodeURIComponent(resumenTexto);
       html = `
@@ -1141,13 +1305,20 @@ function render(){
             <button class="btn btn-gold" style="margin-top:10px;" ${state.ratingValue? '' : 'disabled'} onclick="actionSubmitRating('${esc(nombreValorador)}')">Enviar valoración</button>
           `}
         </div>
+        <div class="card center">
+          <p class="hint">¿Jugamos otra?</p>
+          <div class="row">
+            <button class="btn btn-gold" onclick="renderCreateConfig()">Jugar otra vez</button>
+            <button class="btn btn-outline" onclick="goHome()">Salir</button>
+          </div>
+        </div>
         <div class="step-indicator">Paso 4 de 4</div>
-        <div class="slide-nav"><button class="btn btn-outline" onclick="rankingNav(-1)">← Anterior</button></div>
-        <div class="footer-nav"><a onclick="goHome()">Volver al inicio</a></div>`;
+        <div class="slide-nav"><button class="btn btn-outline" onclick="rankingNav(-1)">← Anterior</button></div>`;
     }
   }
 
   app.innerHTML = html;
+  if(cambioDeVista) window.scrollTo(0,0);
 }
 
 async function actionSendEmailSummary(){
@@ -1192,13 +1363,13 @@ function rankingNav(delta){
   render();
 }
 
-function renderCreateConfig(){ state.screen='create-config'; state.cfgParticipa=undefined; state.cfgModoEspectador=undefined; render(); }
+function renderCreateConfig(){ state.screen='create-config'; state.cfgParticipa=undefined; state.cfgModoEspectador=undefined; state.cfgVisibilidad=undefined; render(); }
 function actionOpenSpectatorFromInside(){
   state.role='spectator'; state.screen='spectator'; state.myPlayerId=null; render();
 }
 
 async function screenForGameState(g, role, myPlayerId){
-  if(role==='spectator') return 'spectator';
+  if(role==='spectator') return g.estado==='finalizada' ? 'ranking' : 'spectator';
   if(g.estado==='finalizada') return 'ranking';
   if(role==='player'){
     const me = g.jugadores.find(j=>j.id===myPlayerId);
@@ -1260,11 +1431,8 @@ async function screenForGameState(g, role, myPlayerId){
     state.code = pCode; state.role = 'player';
     const g = await loadGame(pCode);
     if(g && g.estado==='inscripcion'){
-      const profile = loadProfile();
-      if(profile.foto) state.photoData = profile.foto;
-      state.screen='join'; startPolling();
-      render();
-      callAction('trackOpen', { code: pCode });
+      startPolling();
+      goToJoin();
       return;
     }
     else if(g){ state.error='Esta partida ya ha empezado y no admite nuevos jugadores.'; }
