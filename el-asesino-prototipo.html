@@ -389,7 +389,7 @@ function checkNuevasSolicitudes(g){
 
 async function pollTick(){
   if(!state.code) return;
-  if(state.screen==='join' || state.showKillModal) return; // no interrumpir mientras el usuario está escribiendo
+  if(state.screen==='join' || state.screen==='tutorial' || state.showKillModal) return; // no interrumpir mientras el usuario está escribiendo o leyendo el tutorial
   const g = await loadGame(state.code);
   if(!g) return;
   state._game = g;
@@ -823,7 +823,7 @@ function render(){
     const pasos = [
       { titulo:'¿CÓMO FUNCIONA?', texto:'Vas a recibir un objetivo: otra persona de la partida. Tu misión es conseguir que ESA PERSONA haga, sin sospechar, una acción secreta que tú le asignarás.' },
       { titulo:'CUANDO LO CONSIGUES', texto:'En cuanto tu objetivo hace la acción, queda eliminado. Heredas automáticamente a quién estaba cazando él y con qué acción — y sigues cazando. Al final solo queda un superviviente.' },
-      { titulo:'ELIGE BIEN TU ACCIÓN', texto:'La acción que propongas se la asignaremos a otra persona para que te la haga a TI. Que sea realista y fácil de pedir sin levantar sospechas — así el juego es mucho más divertido para todos.' }
+      { titulo:'ELIGE BIEN TU ACCIÓN', texto:'Tu acción no volverá necesariamente a ti — se reparte al azar entre todos, y puede tocarle a cualquiera para usarla sobre cualquier objetivo. Por eso cuanto más realista y fácil de pedir sin levantar sospechas sea, más divertida será para todo el grupo.' }
     ];
     const p = pasos[step];
     html = `
