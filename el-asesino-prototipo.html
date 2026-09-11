@@ -20,10 +20,12 @@
     --border:#2a2a30;
   }
   *{box-sizing:border-box;}
+  html{ background:var(--bg); }
   body{
     margin:0; background:var(--bg); color:var(--text);
     font-family:'Work Sans',sans-serif;
     min-height:100vh;
+    min-height:100dvh;
   }
   h1,h2,h3,.display{
     font-family:'Bebas Neue',sans-serif;
@@ -31,7 +33,7 @@
     font-weight:400;
     margin:0;
   }
-  #app{max-width:480px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; padding:20px 18px 40px;}
+  #app{max-width:480px; margin:0 auto; padding:20px 18px 40px;}
   .wide #app{max-width:900px;}
   .top{ text-align:center; margin-bottom:22px;}
   .top h1{font-size:2.6rem; color:var(--gold);}
@@ -116,7 +118,7 @@
   .badge .bn{ font-size:1.15rem;}
   .err{ color:#e07a7a; font-size:0.85rem; margin-top:6px;}
   .center{ text-align:center;}
-  .footer-nav{ margin-top:auto; text-align:center; padding-top:24px;}
+  .footer-nav{ margin-top:28px; text-align:center; padding-top:24px;}
   .footer-nav a{ color:var(--text-dim); font-size:0.8rem; cursor:pointer; text-decoration:underline;}
   .hint{ color:var(--text-dim); font-size:0.8rem; margin-top:4px;}
   .photo-btn{
@@ -136,6 +138,16 @@
     width:100%; height:100%; object-fit:cover; display:block;
     clip-path: polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%);
     filter: drop-shadow(0 0 14px rgba(201,162,75,0.55));
+  }
+  .mission-photo.placeholder-oculto{
+    clip-path: polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%);
+    background: linear-gradient(135deg, var(--panel-2) 0%, var(--panel) 100%);
+    display:flex; align-items:center; justify-content:center;
+    border:1px dashed var(--gold-dim);
+    filter: drop-shadow(0 0 10px rgba(201,162,75,0.25));
+  }
+  .mission-photo.placeholder-oculto span{
+    font-family:'Bebas Neue',sans-serif; font-size:3.4rem; color:var(--gold-dim);
   }
   .avatar.kite{ border:none; clip-path: polygon(50% 0%, 100% 40%, 50% 100%, 0% 40%);}
   .avatar.dead.kite{ filter: grayscale(1) brightness(0.5) drop-shadow(0 0 10px rgba(85,85,90,0.6));}
@@ -917,23 +929,25 @@ function render(){
         ${mostrarAhora ? `
           <div class="mission-photo ${esObjetivoNuevo?'reveal':''}"><img src="${avatarSrc(photoOf(target.id))}"></div>
           <div class="name">${esc(target.nombre)}</div>
-          <p class="tag" style="margin-top:14px;">Consigue que tu objetivo:</p>
-          <div class="mission-box">${esc(me.accionAsignada)}</div>
-          ${modoOculto? `<button class="btn btn-outline" onclick="hideTarget()">Ocultar ahora</button>` : ''}
-          <p class="hint" style="text-align:center; margin-top:10px;">
-            ${solicitudPendiente
-              ? 'Solicitud enviada — esperando que el organizador la revise.'
-              : `¿Misión imposible? <a onclick="actionSolicitarCambio()" style="color:var(--gold); cursor:pointer; text-decoration:underline;">Pedir un cambio</a>`}
-          </p>
         ` : `
-          <p class="hint" style="text-align:center; padding:20px 0;">Tu objetivo está oculto por privacidad — nadie a tu alrededor podrá verlo sin querer.</p>
-          <button class="btn btn-gold" onclick="revealTarget()">Ver mi objetivo</button>
+          <div class="mission-photo placeholder-oculto"><span>?</span></div>
+          <div class="name" style="color:var(--text-dim); letter-spacing:0.06em; font-size:1.1rem;">OBJETIVO OCULTO</div>
         `}
-      </div>
-      ${mostrarAhora? `
-      <div class="card center">
+        ${modoOculto? `
+          <div class="center" style="margin:8px 0 4px;">
+            ${mostrarAhora
+              ? `<button class="btn btn-outline" onclick="hideTarget()">Ocultar ahora</button>`
+              : `<button class="btn btn-gold" onclick="revealTarget()">Ver mi objetivo</button>`}
+          </div>` : ''}
+        <p class="tag" style="margin-top:14px;">Consigue que tu objetivo:</p>
+        <div class="mission-box">${esc(me.accionAsignada)}</div>
         <button class="btn btn-blood" onclick="state.showKillModal=true; state.modalError=null; render();">He completado mi misión</button>
-      </div>` : ''}
+        <p class="hint" style="text-align:center; margin-top:10px;">
+          ${solicitudPendiente
+            ? 'Solicitud enviada — esperando que el organizador la revise.'
+            : `¿Misión imposible? <a onclick="actionSolicitarCambio()" style="color:var(--gold); cursor:pointer; text-decoration:underline;">Pedir un cambio</a>`}
+        </p>
+      </div>
       <div class="card center">
         <p class="hint clickable-hint" onclick="state.showVictimList=!state.showVictimList; render();">Víctimas conseguidas: ${me.numVictimas} ${me.numVictimas>0?(state.showVictimList?'▲':'▼'):''}</p>
         ${state.showVictimList && me.victimasLog && me.victimasLog.length ? `
@@ -974,7 +988,7 @@ function render(){
         <div class="modal-bg">
           <div class="modal">
             <h3 style="margin-bottom:10px;">Confirmar eliminación</h3>
-            <p class="hint">Pide a ${esc(target.nombre)} su PIN de 4 dígitos.</p>
+            <p class="hint">Pide a ${mostrarAhora ? esc(target.nombre) : 'tu objetivo'} su PIN de 4 dígitos.</p>
             <input type="tel" id="kill-pin" maxlength="4" placeholder="0000">
             ${state.modalError? `<div class="err">${esc(state.modalError)}</div>`:''}
             <button class="btn btn-gold" onclick="actionConfirmKill()">Confirmar</button>
@@ -1301,7 +1315,7 @@ function render(){
             <div class="stars-row">
               ${[1,2,3,4,5].map(n=>`<span class="star-btn ${n<=(state.ratingValue||0)?'filled':''}" onclick="state.ratingValue=${n}; render();">★</span>`).join('')}
             </div>
-            <textarea id="rating-comment" placeholder="¿Algo que mejorarías? (opcional)" style="width:100%; min-height:60px; padding:10px; border-radius:5px; border:1px solid var(--border); background:var(--panel-2); color:var(--text); font-family:inherit; font-size:0.9rem;"></textarea>
+            <textarea id="rating-comment" placeholder="¿Algo que mejorarías? (opcional)" style="width:100%; min-height:60px; padding:10px; border-radius:5px; border:1px solid var(--border); background:var(--panel-2); color:var(--text); font-family:inherit; font-size:1rem;"></textarea>
             <button class="btn btn-gold" style="margin-top:10px;" ${state.ratingValue? '' : 'disabled'} onclick="actionSubmitRating('${esc(nombreValorador)}')">Enviar valoración</button>
           `}
         </div>
@@ -1318,7 +1332,10 @@ function render(){
   }
 
   app.innerHTML = html;
-  if(cambioDeVista) window.scrollTo(0,0);
+  if(cambioDeVista){
+    if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    requestAnimationFrame(()=> requestAnimationFrame(()=> window.scrollTo(0,0)));
+  }
 }
 
 async function actionSendEmailSummary(){
