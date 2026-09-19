@@ -153,10 +153,12 @@
   .avatar.dead.kite{ filter: grayscale(1) brightness(0.5) drop-shadow(0 0 10px rgba(85,85,90,0.6));}
   .clickable-hint{ cursor:pointer;}
   .code-pill{
-    position:sticky; top:0; text-align:center; font-size:0.7rem; letter-spacing:0.08em;
+    text-align:center; font-size:0.7rem; letter-spacing:0.08em; cursor:pointer;
     color:var(--gold); background:var(--panel-2); border:1px solid var(--border); border-radius:20px;
-    padding:4px 14px; width:fit-content; margin:0 auto 14px; text-transform:uppercase; z-index:10;
+    padding:4px 14px; width:fit-content; margin:0 auto 14px;
   }
+  .code-pill .txt{ text-transform:uppercase;}
+  .code-pill .hint-inline{ text-transform:none; letter-spacing:normal; color:var(--text-dim); font-size:0.65rem; margin-left:6px;}
   @media (max-width: 360px){
     .lobby-grid, .spectator-grid{ grid-template-columns:repeat(2,1fr); }
   }
@@ -213,7 +215,7 @@
 <script>
 // ==== CONFIGURA ESTO ANTES DE SUBIR EL ARCHIVO ====
 const CONFIG = {
-  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxb6jclRtv1zV-HExI4qHAZGIJJ1QTBqvTyC2gI6DEVnUlF5VwyER6gofpyB9l2uTUA_w/exec", // termina en /exec
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbw1yKZFBTDQOsmsywcgeVR6reydetgXmljjFM5TvnrBHdpLo701qOzGtaxYlpyhN3uYKw/exec", // termina en /exec
   SECRET_KEY: "RGA1985",                 // la misma que pusiste en Code.gs
   BASE_URL: ""  // ej: "https://automatizacionesrga.github.io/juegos/el-asesino-prototipo.html" — la URL donde subas este archivo
 };
@@ -276,7 +278,7 @@ function derangement(ids){
   } while(perm.some((v,i)=>v===ids[i]));
   return perm;
 }
-function resizeImage(file, maxSize=220){
+function resizeImage(file, maxSize=180){
   return new Promise((resolve,reject)=>{
     const reader = new FileReader();
     reader.onload = e => {
@@ -288,7 +290,7 @@ function resizeImage(file, maxSize=220){
         const canvas = document.createElement('canvas');
         canvas.width=w; canvas.height=h;
         canvas.getContext('2d').drawImage(img,0,0,w,h);
-        resolve(canvas.toDataURL('image/jpeg',0.72));
+        resolve(canvas.toDataURL('image/jpeg',0.62));
       };
       img.onerror=reject;
       img.src=e.target.result;
@@ -304,7 +306,7 @@ async function loadGame(code){
     const json = await res.json();
     if(json.error){ console.error('Error backend:', json.error); return null; }
     return json.found ? JSON.parse(json.data) : null;
-  }catch(e){ console.error(e); return null; }
+  }catch(e){ console.error(e); return undefined; } // undefined = fallo de conexión, distinto de "no existe" (null)
 }
 async function ensurePhotos(g){
   if(!g || !g.jugadores) return;
@@ -339,7 +341,7 @@ async function callAction(action, payload){
     });
     const json = await res.json();
     if(json.error) return { ok:false, error: json.error };
-    return { ok:true, data: json.data ? JSON.parse(json.data) : null, jugadorId: json.jugadorId };
+    return { ok:true, data: json.data ? JSON.parse(json.data) : null, jugadorId: json.jugadorId, esAdmin: json.esAdmin, pin: json.pin };
   }catch(e){ console.error(e); return { ok:false, error:'red' }; }
 }
 async function saveJoin(code, jugador){ return callAction('join', { code, jugador }); }
@@ -401,7 +403,7 @@ function checkNuevasSolicitudes(g){
 
 async function pollTick(){
   if(!state.code) return;
-  if(state.screen==='join' || state.screen==='tutorial' || state.showKillModal) return; // no interrumpir mientras el usuario está escribiendo o leyendo el tutorial
+  if(state.screen==='join' || state.screen==='tutorial' || state.screen==='created' || state.showKillModal) return; // no interrumpir mientras el usuario está escribiendo, leyendo el tutorial, o viendo el código para compartir
   const g = await loadGame(state.code);
   if(!g) return;
   state._game = g;
@@ -444,6 +446,15 @@ function startPolling(){
 
 // ---------- acciones ----------
 async function actionCreateGame(participa, modoEspectador, tipoEvento, modoVisibilidad){
+  let adminNombre = null, adminPin = null;
+  if(participa===false){
+    adminNombre = document.getElementById('cfg-admin-nombre').value.trim();
+    adminPin = document.getElementById('cfg-admin-pin').value.trim();
+    if(!adminNombre || !/^\d{4}$/.test(adminPin)){
+      state.error='Pon tu nombre y un PIN de 4 números para poder recuperar el panel si sales por error.';
+      render(); return;
+    }
+  }
   let code = genCode();
   for(let i=0;i<5;i++){
     const existente = await loadGame(code);
@@ -453,6 +464,7 @@ async function actionCreateGame(participa, modoEspectador, tipoEvento, modoVisib
   const g = {
     code, estado:'inscripcion', adminParticipa: participa, modoEspectador: modoEspectador || 'anon',
     modoVisibilidadObjetivo: modoVisibilidad || 'visible',
+    organizadorNombre: adminNombre, organizadorPin: adminPin,
     tipoEvento: tipoEvento || null, creadorDeviceId: getDeviceId(),
     creadoEn: Date.now(), iniciadoEn:null, jugadores: [], ultimaReasignacion:null, aperturasInscripcion:0
   };
@@ -503,6 +515,7 @@ async function actionGoJoinExisting(){
   const code = document.getElementById('join-code-input').value.trim().toUpperCase();
   if(!code){ state.error='Introduce un código.'; render(); return; }
   const g = await loadGame(code);
+  if(g===undefined){ state.error='No se ha podido conectar. Comprueba tu conexión e inténtalo de nuevo.'; render(); return; }
   if(!g){ state.error='No existe ninguna partida con ese código.'; render(); return; }
   if(g.estado!=='inscripcion'){ state.error='Esta partida ya ha empezado y no admite nuevos jugadores.'; render(); return; }
   state.code = code; state.error=null; state.role='player';
@@ -537,7 +550,7 @@ async function actionSubmitJoin(){
   }
   saveProfile({ nombre, foto: state.photoData || null });
   state._game = result.data;
-  state.myPlayerId = jugador.id;
+  state.myPlayerId = result.jugadorId || jugador.id;
   state.error=null;
   saveSession();
   state.screen='lobby';
@@ -565,6 +578,19 @@ function handlePhotoInput(input){
     const prev = document.getElementById('photo-preview');
     if(prev) prev.src = data;
   });
+}
+
+async function actionVerPin(jugadorId, nombre){
+  const result = await callAction('verPin', { code: state.code, jugadorId });
+  if(result.ok) alert(`PIN de ${nombre}: ${result.pin}`);
+  else alert('No se ha podido consultar el PIN.');
+}
+
+async function actionEliminarJugador(jugadorId, nombre){
+  if(!confirm(`¿Eliminar a ${nombre} de la partida? Si tiene un perfil duplicado, elimina el que sobre.`)) return;
+  const result = await callAction('eliminarJugador', { code: state.code, jugadorId });
+  if(result.ok){ state._game = result.data; render(); }
+  else alert('No se ha podido eliminar. Inténtalo de nuevo.');
 }
 
 async function actionStartGame(){
@@ -645,6 +671,7 @@ async function actionOpenSpectator(){
   const code = document.getElementById('spec-code-input').value.trim().toUpperCase();
   if(!code){ state.error='Introduce el código de la partida.'; render(); return; }
   const g = await loadGame(code);
+  if(g===undefined){ state.error='No se ha podido conectar. Comprueba tu conexión e inténtalo de nuevo.'; render(); return; }
   if(!g){ state.error='No existe ninguna partida con ese código.'; render(); return; }
   state.code=code; state.role='spectator'; state.error=null; state.screen='spectator';
   state._game = g;
@@ -662,16 +689,18 @@ async function actionRecoverSubmit(){
   const result = await callAction('recover', { code, nombre, pin });
   state.recovering=false;
   if(!result.ok){
-    state.error = result.error==='no existe la partida' ? 'No existe ninguna partida con ese código.' : 'No hemos encontrado ningún jugador con ese nombre y PIN en esa partida.';
+    state.error = result.error==='red' ? 'No se ha podido conectar. Comprueba tu conexión e inténtalo de nuevo.'
+      : result.error==='no existe la partida' ? 'No existe ninguna partida con ese código.'
+      : 'No hemos encontrado a nadie con ese nombre y PIN en esa partida.';
     render(); return;
   }
   state.code = code;
-  state.role = 'player';
-  state.myPlayerId = result.jugadorId;
+  state.role = result.esAdmin ? 'admin' : 'player';
+  state.myPlayerId = result.esAdmin ? null : result.jugadorId;
   state._game = result.data;
   state.lastReassignSeen = result.data.ultimaReasignacion || null;
   saveSession();
-  const pantalla = await screenForGameState(result.data, 'player', result.jugadorId);
+  const pantalla = await screenForGameState(result.data, state.role, state.myPlayerId);
   state.screen = pantalla || 'lobby';
   if(state.screen!=='ranking') startPolling();
   render();
@@ -699,7 +728,7 @@ function revealMyPin(){
 function goHome(){
   if(state.pollTimer) clearInterval(state.pollTimer);
   clearSession();
-  Object.assign(state, {screen:'home', code:null, role:null, myPlayerId:null, error:null, photoData:null, _pendingAdminJoin:false, rankingSlide:0, showMyPin:false, showAccionHint:false, _lastTargetId:null, _deadAnimated:false, ratingSubmitted:false, ratingValue:0, showEmailForm:false, emailSent:false, sendingEmail:false, cfgTipoEvento:undefined, cfgVisibilidad:undefined, showTarget:false, showSolicitudesModal:false});
+  Object.assign(state, {screen:'home', code:null, role:null, myPlayerId:null, error:null, photoData:null, _pendingAdminJoin:false, rankingSlide:0, showMyPin:false, showAccionHint:false, _lastTargetId:null, _deadAnimated:false, ratingSubmitted:false, ratingValue:0, showEmailForm:false, emailSent:false, sendingEmail:false, cfgTipoEvento:undefined, cfgVisibilidad:undefined, showTarget:false, showSolicitudesModal:false, showCodeQr:false});
   render();
 }
 
@@ -713,6 +742,24 @@ function formatElapsed(ms){
 }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function avatarSrc(foto){ return foto || 'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%231d1d22"/></svg>'); }
+function codePillHtml(){
+  return `<div class="code-pill" onclick="state.showCodeQr=true; render();"><span class="txt">Partida: ${esc(state.code)}</span><span class="hint-inline">Toca para ver el QR</span></div>`;
+}
+function codeQrModalHtml(){
+  if(!state.showCodeQr) return '';
+  const url = shareUrlFor(state.code);
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=' + encodeURIComponent(url);
+  return `
+    <div class="modal-bg" onclick="state.showCodeQr=false; render();">
+      <div class="modal center" onclick="event.stopPropagation();">
+        <h3 style="margin-bottom:10px;">Escanea para unirte</h3>
+        <div class="code-box" style="margin-bottom:14px;">${esc(state.code)}</div>
+        <img class="qr" src="${qrUrl}" width="240" height="240" alt="QR de la partida">
+        <button class="btn btn-outline" style="margin-top:14px;" onclick="copyLink('${url}')">Copiar enlace</button>
+        <button class="btn btn-gold" style="margin-top:8px;" onclick="state.showCodeQr=false; render();">Cerrar</button>
+      </div>
+    </div>`;
+}
 
 function render(){
   document.body.classList.toggle('wide', state.screen==='spectator' || state.screen==='admin-panel' || state.screen==='panel');
@@ -738,18 +785,20 @@ function render(){
         <input type="text" id="spec-code-input" placeholder="Código de partida" maxlength="5">
         <button class="btn btn-outline" onclick="actionOpenSpectator()">Abrir modo espectador</button>
       </div>
-      <div class="footer-nav"><a onclick="state.screen='recover'; state.error=null; render();">¿Ya estabas jugando y perdiste el acceso? Recupera tu partida</a></div>`;
+      <div class="footer-nav">
+        <a onclick="state.screen='recover'; state.error=null; render();">¿Perdiste el acceso a tu partida o a tu panel? Recupéralo aquí</a>
+      </div>`;
   }
 
   else if(state.screen==='recover'){
     html = `
-      <div class="top"><h1>RECUPERAR PARTIDA</h1></div>
+      <div class="top"><h1>RECUPERAR ACCESO</h1></div>
       <div class="card">
-        <p class="hint">Introduce los mismos datos con los que te inscribiste.</p>
+        <p class="hint">Introduce los mismos datos que pusiste — vale tanto si eras jugador como si eras el organizador.</p>
         <label>Código de partida</label>
         <input type="text" id="rec-code" placeholder="Código de partida" maxlength="5">
         <label>Tu nombre</label>
-        <input type="text" id="rec-nombre" placeholder="El mismo nombre con el que te uniste">
+        <input type="text" id="rec-nombre" placeholder="El mismo nombre que pusiste">
         <label>Tu PIN</label>
         <input type="tel" id="rec-pin" maxlength="4" placeholder="0000">
         ${state.error? `<div class="err">${esc(state.error)}</div>`:''}
@@ -804,6 +853,15 @@ function render(){
           <button class="btn ${state.cfgTipoEvento==='despedida'?'btn-gold':'btn-outline'}" style="font-size:0.82rem;" onclick="state.cfgTipoEvento='despedida'; render();">Despedida</button>
         </div>
       </div>
+      ${p===false? `
+      <div class="card">
+        <p style="font-size:0.95rem;">Tu acceso como organizador</p>
+        <p class="hint">Si sales sin querer de la app, esto es lo que necesitarás para volver a tu panel — igual que hacen los jugadores con su nombre y PIN.</p>
+        <label>Tu nombre</label>
+        <input type="text" id="cfg-admin-nombre" placeholder="Tu nombre (solo para recuperar el panel)">
+        <label>Tu PIN (4 números)</label>
+        <input type="tel" id="cfg-admin-pin" maxlength="4" placeholder="0000">
+      </div>` : ''}
       <div class="card center">
         <button class="btn btn-gold" ${(p===undefined||!m||!state.cfgVisibilidad)?'disabled':''} onclick="actionCreateGame(state.cfgParticipa, state.cfgModoEspectador, state.cfgTipoEvento, state.cfgVisibilidad)">Crear partida</button>
       </div>
@@ -825,6 +883,7 @@ function render(){
           <button class="btn btn-outline" onclick="copyLink('${url}')">Copiar enlace</button>
           <a class="btn btn-outline" href="${waUrl}" target="_blank" rel="noopener">WhatsApp</a>
         </div>
+        ${state.adminParticipaFlag ? '' : `<p class="hint">Si sales sin querer del panel, podrás volver con tu nombre y PIN desde "¿Perdiste el acceso...? Recupéralo aquí" en la pantalla de inicio.</p>`}
         <button class="btn btn-gold" onclick="${state.adminParticipaFlag ? 'goToJoin()' : "state.screen='lobby'; render();"}">${state.adminParticipaFlag? 'Continuar y crear tu perfil' : 'Ir a la sala de espera'}</button>
       </div>
       <div class="footer-nav"><a onclick="goHome()">← Cancelar</a></div>`;
@@ -875,7 +934,8 @@ function render(){
         <input type="tel" id="j-pin" maxlength="4" placeholder="0000">
         <p class="hint">Dale este PIN solo a quien consiga matarte, en el momento en que lo logre.</p>
         ${state.error? `<div class="err">${esc(state.error)}</div>`:''}
-        <button class="btn btn-gold" ${state.joining?'disabled':''} onclick="actionSubmitJoin()">${state.joining?'Entrando…':'Entrar en la partida'}</button>
+        ${state.joining? `<p class="hint center" style="color:var(--gold);">Guardando tu perfil, puede tardar unos segundos con mala cobertura — no vuelvas a pulsar.</p>` : ''}
+        <button class="btn btn-gold" ${state.joining?'disabled':''} onclick="actionSubmitJoin()">${state.joining?'Guardando…':'Entrar en la partida'}</button>
       </div>
       <div class="footer-nav"><a onclick="goHome()">← Probar con otro código</a></div>`;
   }
@@ -886,7 +946,7 @@ function render(){
     const misDatos = jugadores.find(j=>j.id===state.myPlayerId);
     const puedeIniciar = state.role==='admin' || (misDatos && misDatos.esAdmin);
     html = `
-      <div class="code-pill">Partida: ${esc(state.code)}</div>
+      ${codePillHtml()}
       <div class="top"><h1>SALA DE ESPERA</h1><p>Partida ${esc(state.code)} · ${jugadores.length} unidos</p></div>
       <div class="card">
         <div class="lobby-grid">
@@ -894,6 +954,7 @@ function render(){
             <div class="lobby-item">
               <img src="${avatarSrc(photoOf(j.id))}">
               <div class="lname">${esc(j.nombre)}</div>
+              ${puedeIniciar? `<a onclick="actionEliminarJugador('${j.id}','${esc(j.nombre)}')" style="color:var(--blood); font-size:0.68rem; cursor:pointer; text-decoration:underline;">Eliminar</a>` : ''}
             </div>`).join('')}
         </div>
         ${jugadores.length===0? '<p class="hint center">Aún no se ha unido nadie.</p>':''}
@@ -923,7 +984,7 @@ function render(){
     const mostrarAhora = !modoOculto || state.showTarget;
     const solicitudPendiente = (g.solicitudesCambio||[]).some(s=>s.jugadorId===me.id && s.estado==='pendiente');
     html = `
-      <div class="code-pill">Partida: ${esc(state.code)}</div>
+      ${codePillHtml()}
       <div class="top"><h1>TU MISIÓN</h1><p class="tag">Quedan ${vivos} en juego</p></div>
       <div class="card">
         ${mostrarAhora ? `
@@ -1016,7 +1077,7 @@ function render(){
     const primeraVez = !state._deadAnimated;
     state._deadAnimated = true;
     html = `
-      <div class="code-pill">Partida: ${esc(state.code)}</div>
+      ${codePillHtml()}
       <div class="top"><h1>HAS CAÍDO</h1></div>
       <div class="card center">
         <div class="avatar-wrap dead"><img class="avatar dead kite ${primeraVez?'reveal-dead':''}" src="${avatarSrc(photoOf(me.id))}"><div class="skull">💀</div></div>
@@ -1033,7 +1094,7 @@ function render(){
     const vivos = g.jugadores.filter(j=>j.estado==='vivo');
     const muertos = g.jugadores.filter(j=>j.estado==='muerto');
     html = `
-      <div class="code-pill">Partida: ${esc(state.code)}</div>
+      ${codePillHtml()}
       <div class="top"><h1>PANEL DEL ORGANIZADOR</h1><p>Partida ${esc(state.code)} · ${vivos.length} vivos / ${g.jugadores.length}</p></div>
       <div class="card">
         <button class="btn btn-gold" onclick="actionReassignAll()">Reasignar todos los objetivos</button>
@@ -1073,6 +1134,7 @@ function render(){
               <img src="${avatarSrc(photoOf(j.id))}">
               <div class="sname">${esc(j.nombre)}${j.esAdmin?' 👑':''}</div>
               <div class="hint">${j.numVictimas} víctimas</div>
+              <a onclick="actionVerPin('${j.id}','${esc(j.nombre)}')" style="color:var(--gold); font-size:0.68rem; cursor:pointer; text-decoration:underline;">Ver PIN</a>
             </div>`).join('')}
         </div>
       </div>
@@ -1331,6 +1393,7 @@ function render(){
     }
   }
 
+  html += codeQrModalHtml();
   app.innerHTML = html;
   if(cambioDeVista){
     if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -1421,6 +1484,7 @@ async function screenForGameState(g, role, myPlayerId){
     state.code = espectadorCode; state.role = 'spectator';
     const g = await loadGame(espectadorCode);
     if(g){ state._game=g; state.screen='spectator'; saveSession(); startPolling(); ensurePhotos(g); }
+    else if(g===undefined){ state.error='No se ha podido conectar. Comprueba tu conexión e inténtalo de nuevo.'; }
     else { state.error='No existe ninguna partida con ese código.'; }
     render();
     return;
@@ -1453,6 +1517,7 @@ async function screenForGameState(g, role, myPlayerId){
       return;
     }
     else if(g){ state.error='Esta partida ya ha empezado y no admite nuevos jugadores.'; }
+    else if(g===undefined){ state.error='No se ha podido conectar. Comprueba tu conexión e inténtalo de nuevo.'; }
     else { state.error='No existe ninguna partida con ese código.'; }
     render();
     return;
