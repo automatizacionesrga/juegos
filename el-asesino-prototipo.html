@@ -81,8 +81,10 @@
   .lobby-item{ text-align:center;}
   .lobby-item img{ width:100%; aspect-ratio:1/1; border-radius:50%; object-fit:cover; border:2px solid var(--gold);}
   .lobby-item .lname{ font-size:0.78rem; margin-top:4px; color:var(--text-dim); word-break:break-word;}
-  .spectator-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:16px;}
-  .wide .spectator-grid{ grid-template-columns:repeat(6,1fr);}
+  .spectator-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:16px; align-items:start;}
+  @media (min-width: 700px){
+    .spectator-grid{ grid-template-columns:repeat(6,1fr);}
+  }
   .spec-item{ text-align:center; transition:opacity .3s;}
   .spec-item.dead{ opacity:0.42;}
   .spec-item img{ width:100%; aspect-ratio:1/1; border-radius:8px; object-fit:cover; border:2px solid var(--gold);}
@@ -203,7 +205,9 @@
   .victims-grid{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-top:14px;}
   .victim-thumb{ width:44px; height:44px; border-radius:6px; object-fit:cover; filter:grayscale(1) brightness(0.55); border:1px solid var(--grey-dead);}
   .stat-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px;}
-  .wide .stat-grid{ grid-template-columns:repeat(4,1fr);}
+  @media (min-width: 700px){
+    .stat-grid{ grid-template-columns:repeat(4,1fr);}
+  }
   .stat-card{ background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:14px; text-align:center;}
   .stat-card .num{ font-family:'Bebas Neue',sans-serif; font-size:2.2rem; color:var(--gold);}
   .stat-card .lbl{ color:var(--text-dim); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; margin-top:2px;}
@@ -217,7 +221,7 @@
 const CONFIG = {
   APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbw1yKZFBTDQOsmsywcgeVR6reydetgXmljjFM5TvnrBHdpLo701qOzGtaxYlpyhN3uYKw/exec", // termina en /exec
   SECRET_KEY: "RGA1985",                 // la misma que pusiste en Code.gs
-  BASE_URL: ""  // ej: "https://automatizacionesrga.github.io/juegos/el-asesino-prototipo.html" — la URL donde subas este archivo
+  BASE_URL: "https://tuweb.com/juegos/el-asesino.html" — la URL donde subas este archivo
 };
 // ===================================================
 
@@ -243,6 +247,11 @@ document.addEventListener('click', function primeAudio(){
   try{ (window._audioCtx || (window._audioCtx = new (window.AudioContext||window.webkitAudioContext)())).resume(); }catch(e){}
   document.removeEventListener('click', primeAudio);
 }, { once:true });
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState==='visible' && state.code && !['join','tutorial','created'].includes(state.screen)){
+    pollTick();
+  }
+});
 
 const state = {
   screen: 'home',
@@ -975,7 +984,10 @@ function render(){
   else if(state.screen==='game'){
     const g = state._game;
     const me = g.jugadores.find(j=>j.id===state.myPlayerId);
-    const target = g.jugadores.find(j=>j.id===me.objetivoId);
+    const target = me ? g.jugadores.find(j=>j.id===me.objetivoId) : null;
+    if(!me || !target){
+      html = `<div class="top"><h1>UN MOMENTO…</h1></div><div class="card center"><p class="hint">Actualizando tu misión…</p></div>`;
+    } else {
     const vivos = g.jugadores.filter(j=>j.estado==='vivo').length;
     const esObjetivoNuevo = state._lastTargetId !== target.id;
     state._lastTargetId = target.id;
@@ -1067,6 +1079,7 @@ function render(){
             <button class="btn btn-gold" onclick="state.showReassignModal=false; render();">Ver mi nuevo objetivo →</button>
           </div>
         </div>`;
+    }
     }
   }
 
