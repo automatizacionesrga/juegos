@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El Asesino · Amarula Trip Club</title>
+<meta name="theme-color" content="#191919">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#191919;
+    --panel:#222120;
+    --panel-2:#2b2a28;
+    --gold:#BE8F4E;
+    --gold-dim:#8a6a3b;
+    --blood:#8c1f28;
+    --grey-dead:#5a5957;
+    --text:#F2F1ED;
+    --text-dim:#a8a399;
+    --border:#38362f;
+  }
+  *{box-sizing:border-box;}
+  html{ background:var(--bg); }
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Poppins',sans-serif;
+    min-height:100vh;
+    min-height:100dvh;
+  }
+  h1,h2,h3,.display{
+    font-family:'Cormorant Garamond',sans-serif;
+    letter-spacing:0.03em;
+    font-weight:400;
+    margin:0;
+  }
+  #app{max-width:480px; margin:0 auto; padding:20px 18px 40px;}
+  .wide #app{max-width:900px;}
+  .top{ text-align:center; margin-bottom:22px;}
+  .top h1{font-size:2.6rem; color:var(--gold);}
+  .top p{color:var(--text-dim); margin-top:2px; font-size:0.9rem;}
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:6px;
+    padding:22px; margin-bottom:14px;
+  }
+  .btn{
+    display:block; width:100%; padding:14px 16px; border-radius:5px; border:none;
+    font-family:'Poppins',sans-serif; font-weight:600; font-size:1rem; cursor:pointer;
+    margin-top:10px; text-align:center; text-decoration:none;
+  }
+  .btn-gold{ background:var(--gold); color:#1a1305;}
+  .btn-gold:hover{ background:#CDA266;}
+  .btn-outline{ background:transparent; color:var(--text); border:1px solid var(--border);}
+  .btn-outline:hover{ border-color:var(--gold); color:var(--gold);}
+  .btn-blood{ background:var(--blood); color:#f4e6e6;}
+  .btn:disabled{ opacity:0.4; cursor:not-allowed;}
+  label{ display:block; font-size:0.85rem; color:var(--text-dim); margin:14px 0 6px;}
+  input[type=text],input[type=password],input[type=tel]{
+    width:100%; padding:12px; border-radius:5px; border:1px solid var(--border);
+    background:var(--panel-2); color:var(--text); font-size:1rem; font-family:inherit;
+  }
+  input:focus{ outline:none; border-color:var(--gold);}
+  .avatar{
+    width:100%; aspect-ratio:1/1; border-radius:50%; object-fit:cover;
+    border:3px solid var(--gold); display:block; margin:0 auto;
+  }
+  .avatar.dead{ filter:grayscale(1) brightness(0.55); border-color:var(--grey-dead);}
+  .avatar-wrap{ position:relative; width:150px; margin:0 auto 14px;}
+  .skull{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:2.6rem; opacity:0; pointer-events:none;
+  }
+  .avatar-wrap.dead .skull{ opacity:0.9; }
+  .name{ text-align:center; font-size:1.5rem; margin-top:6px;}
+  .name.dead{ color:var(--grey-dead); text-decoration:line-through; text-decoration-color:var(--blood);}
+  .tag{ text-align:center; color:var(--text-dim); font-size:0.8rem; text-transform:uppercase; letter-spacing:0.08em;}
+  .mission-box{
+    background:var(--panel-2); border-left:3px solid var(--gold); padding:14px 16px;
+    border-radius:4px; margin:16px 0; font-size:1.1rem; line-height:1.4;
+  }
+  .lobby-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:14px;}
+  .lobby-item{ text-align:center;}
+  .lobby-item img{ width:100%; aspect-ratio:1/1; border-radius:50%; object-fit:cover; border:2px solid var(--gold);}
+  .lobby-item .lname{ font-size:0.78rem; margin-top:4px; color:var(--text-dim); word-break:break-word;}
+  .spectator-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:16px; align-items:start;}
+  @media (min-width: 700px){
+    .spectator-grid{ grid-template-columns:repeat(6,1fr);}
+  }
+  .spec-item{ text-align:center; transition:opacity .3s;}
+  .spec-item.dead{ opacity:0.42;}
+  .spec-item img{ width:100%; aspect-ratio:1/1; border-radius:8px; object-fit:cover; border:2px solid var(--gold);}
+  .spec-item.dead img{ filter:grayscale(1) brightness(0.5); border-color:var(--grey-dead);}
+  .spec-item .sname{ font-size:0.85rem; margin-top:6px;}
+  .counter{ text-align:center; margin:20px 0;}
+  .counter .big{ font-family:'Cormorant Garamond'; font-size:4rem; color:var(--gold); line-height:1;}
+  .counter .sub{ color:var(--text-dim);}
+  .toggle-row{ display:flex; gap:8px; margin-bottom:10px;}
+  .toggle-row button{ flex:1;}
+  .toggle-row button.active{ background:var(--gold); color:#1a1305; border-color:var(--gold);}
+  .row{ display:flex; gap:10px;}
+  .row .btn{ flex:1;}
+  .code-box{
+    text-align:center; font-family:'Cormorant Garamond'; font-size:2.4rem; letter-spacing:0.15em;
+    color:var(--gold); background:var(--panel-2); border:1px dashed var(--gold-dim);
+    padding:14px; border-radius:6px; margin:14px 0;
+  }
+  .qr{ display:block; margin:16px auto; border-radius:6px; background:#fff; padding:8px;}
+  .small-link{ text-align:center; word-break:break-all; color:var(--text-dim); font-size:0.8rem;}
+  .modal-bg{
+    position:fixed; inset:0; background:rgba(0,0,0,0.7); display:flex; align-items:center;
+    justify-content:center; z-index:50; padding:20px;
+  }
+  .modal{ background:var(--panel); border:1px solid var(--gold-dim); border-radius:8px; padding:24px; max-width:340px; width:100%;}
+  .ranking-row{ display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border);}
+  .ranking-row img{ width:42px; height:42px; border-radius:50%; object-fit:cover;}
+  .ranking-row .rn{ flex:1;}
+  .ranking-row .rv{ color:var(--gold); font-weight:600;}
+  .badge{ background:var(--panel-2); border:1px solid var(--gold-dim); border-radius:6px; padding:14px; margin-bottom:10px; display:flex; gap:12px; align-items:center;}
+  .badge img{ width:50px; height:50px; border-radius:50%; object-fit:cover; border:2px solid var(--gold);}
+  .badge .bt{ font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-dim);}
+  .badge .bn{ font-size:1.15rem;}
+  .err{ color:#e07a7a; font-size:0.85rem; margin-top:6px;}
+  .center{ text-align:center;}
+  .footer-nav{ margin-top:28px; text-align:center; padding-top:24px;}
+  .footer-nav a{ color:var(--text-dim); font-size:0.8rem; cursor:pointer; text-decoration:underline;}
+  .hint{ color:var(--text-dim); font-size:0.8rem; margin-top:4px;}
+  .photo-btn{
+    background:linear-gradient(180deg,var(--panel-2),var(--panel)); border:1px solid var(--gold-dim);
+    color:var(--gold); font-family:'Cormorant Garamond',sans-serif; letter-spacing:0.05em; font-size:1.05rem;
+  }
+  .photo-btn:hover{ border-color:var(--gold);}
+  .info-icon{ cursor:pointer; color:var(--gold); font-style:normal; margin-left:4px;}
+  .step-indicator{ text-align:center; color:var(--text-dim); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.1em; margin-top:16px;}
+  .slide-nav{ display:flex; gap:10px; margin-top:6px;}
+  .slide-nav .btn{ flex:1;}
+  .star-name{ color:var(--gold); font-weight:700;}
+  .avatar-wrap.epic{ width:210px;}
+  .epic-copy{ font-size:1rem; margin-top:10px; line-height:1.4;}
+  .mission-photo{ width:100%; max-width:260px; aspect-ratio:4/3; margin:0 auto 16px; display:block;}
+  .mission-photo img{
+    width:100%; height:100%; object-fit:cover; display:block;
+    clip-path: polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%);
+    filter: drop-shadow(0 0 14px rgba(190,143,78,0.55));
+  }
+  .mission-photo.placeholder-oculto{
+    clip-path: polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%);
+    background: linear-gradient(135deg, var(--panel-2) 0%, var(--panel) 100%);
+    display:flex; align-items:center; justify-content:center;
+    border:1px dashed var(--gold-dim);
+    filter: drop-shadow(0 0 10px rgba(190,143,78,0.25));
+  }
+  .mission-photo.placeholder-oculto span{
+    font-family:'Cormorant Garamond',sans-serif; font-size:3.4rem; color:var(--gold-dim);
+  }
+  .avatar.kite{ border:none; clip-path: polygon(50% 0%, 100% 40%, 50% 100%, 0% 40%);}
+  .avatar.dead.kite{ filter: grayscale(1) brightness(0.5) drop-shadow(0 0 10px rgba(85,85,90,0.6));}
+  .clickable-hint{ cursor:pointer;}
+  .code-pill{
+    text-align:center; font-size:0.7rem; letter-spacing:0.08em; cursor:pointer;
+    color:var(--gold); background:var(--panel-2); border:1px solid var(--border); border-radius:20px;
+    padding:4px 14px; width:fit-content; margin:0 auto 14px;
+  }
+  .code-pill .txt{ text-transform:uppercase;}
+  .code-pill .hint-inline{ text-transform:none; letter-spacing:normal; color:var(--text-dim); font-size:0.65rem; margin-left:6px;}
+  @media (max-width: 360px){
+    .lobby-grid, .spectator-grid{ grid-template-columns:repeat(2,1fr); }
+  }
+  @keyframes revealPop{ from{ opacity:0; transform:scale(0.85);} to{ opacity:1; transform:scale(1);} }
+  .mission-photo.reveal img{ animation: revealPop 0.55s ease-out; }
+  @keyframes fadeToGray{ from{ filter:none; opacity:0.4;} to{ filter:grayscale(1) brightness(0.5) drop-shadow(0 0 10px rgba(85,85,90,0.6)); opacity:1;} }
+  .reveal-dead{ animation: fadeToGray 1.2s ease forwards; }
+  @keyframes slideIn{ from{ opacity:0; transform:translateY(14px);} to{ opacity:1; transform:translateY(0);} }
+  .slide-enter{ animation: slideIn 0.4s ease-out; }
+  @keyframes confettiFall{
+    0%{ transform:translateY(-20px) rotate(0deg); opacity:1;}
+    100%{ transform:translateY(220px) rotate(360deg); opacity:0;}
+  }
+  .confetti-wrap{ position:relative; height:0;}
+  .confetti-piece{
+    position:absolute; top:-10px; width:8px; height:14px; opacity:0.9;
+    animation: confettiFall 2.2s ease-in forwards;
+  }
+  .stars-row{ display:flex; gap:8px; justify-content:center; margin:12px 0;}
+  .star-btn{ font-size:2rem; cursor:pointer; color:var(--grey-dead); transition:color .15s, transform .15s;}
+  .star-btn.filled{ color:var(--gold); transform:scale(1.1);}
+  .winner-stage{
+    position:relative; width:100%; max-width:280px; aspect-ratio:1/1;
+    margin:0 auto 18px; display:flex; align-items:center; justify-content:center;
+  }
+  .winner-bg{ position:absolute; inset:0; overflow:hidden; border-radius:14px;}
+  .bg-thumb{
+    position:absolute; width:15%; aspect-ratio:1/1; border-radius:6px; object-fit:cover;
+    filter:grayscale(1) brightness(0.38); opacity:0.6;
+  }
+  .winner-photo{
+    position:relative; width:66%; aspect-ratio:1/1; border-radius:50%; overflow:hidden;
+    border:4px solid var(--gold); box-shadow:0 0 34px rgba(190,143,78,0.55); z-index:2;
+  }
+  .winner-photo img{ width:100%; height:100%; object-fit:cover; display:block;}
+  .final-name{ text-align:center; font-family:'Cormorant Garamond',sans-serif; font-size:2.5rem; color:var(--gold); letter-spacing:0.03em; margin-top:4px;}
+  .final-label{ text-align:center; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.18em; font-size:0.72rem; margin-bottom:6px;}
+  .rank-pos{ font-family:'Cormorant Garamond',sans-serif; font-size:1.2rem; color:var(--text-dim); width:26px; text-align:center; flex-shrink:0;}
+  .tag-labels{ display:flex; flex-wrap:wrap; gap:4px; margin-top:2px;}
+  .tag-pill{ font-size:0.65rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--gold); border:1px solid var(--gold-dim); border-radius:10px; padding:1px 7px;}
+  .time-highlight{ font-family:'Cormorant Garamond',sans-serif; font-size:3rem; color:var(--gold); letter-spacing:0.03em; margin:2px 0 8px;}
+  .victims-grid{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-top:14px;}
+  .victim-thumb{ width:44px; height:44px; border-radius:6px; object-fit:cover; filter:grayscale(1) brightness(0.55); border:1px solid var(--grey-dead);}
+  .stat-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px;}
+  @media (min-width: 700px){
+    .stat-grid{ grid-template-columns:repeat(4,1fr);}
+  }
+  .stat-card{ background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:14px; text-align:center;}
+  .stat-card .num{ font-family:'Cormorant Garamond',sans-serif; font-size:2.2rem; color:var(--gold);}
+  .stat-card .lbl{ color:var(--text-dim); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; margin-top:2px;}
+
+  /* ---- Marca Amarula Trip Club ---- */
+  body{ font-variant-numeric: lining-nums; }
+  h1,h2,h3{ font-weight:700; }
+  .top h1{ letter-spacing:0.06em; }
+  .counter .big,.code-box,.photo-btn,.mission-photo.placeholder-oculto span,.final-name,.rank-pos,.time-highlight,.stat-card .num{ font-weight:700; }
+  textarea{
+    width:100%; min-height:110px; padding:12px; border-radius:5px; border:1px solid var(--border);
+    background:var(--panel-2); color:var(--text); font-size:1rem; font-family:inherit; resize:vertical;
+  }
+  textarea:focus{ outline:none; border-color:var(--gold);}
+  .brand-bar{ text-align:center; margin:2px 0 16px;}
+  .brand-word{ font-family:'Cormorant Garamond',serif; font-weight:700; letter-spacing:0.32em; color:var(--gold); padding-left:0.32em; line-height:1;}
+  .brand-word span{ display:block; font-family:'Poppins',sans-serif; font-weight:500; font-size:0.42em; letter-spacing:0.5em; margin-top:6px; padding-left:0.5em;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ==== CONFIGURA ESTO ANTES DE SUBIR EL ARCHIVO ====
+const CONFIG = {
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbyExcbS7yMPZkFSrmwwP2fzv4NeGwM3sPWndasoy_FltbuqjYYokJQJgwuaBiTlXEBE/exec", // termina en /exec
+  SECRET_KEY: "AMARULA-047d893fb2ed",   // ya es la misma que en Code-amarula.gs
+  BASE_URL: "https://automatizacionesrga.github.io/juegos/el-asesino-amarula.html" // la URL donde subes este archivo
+};
+// ===================================================
+
+// ==== MARCA (Amarula Trip Club) ====
+const BRAND = {
+  NOMBRE: "Amarula Trip Club",
+  LOGO_SRC: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2aWV3Qm94PSIwIDAgNTYwIDUyMC44OCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJsaW5lYXItZ3JhZGllbnQiIHgxPSIyODIuODYiIHkxPSIwIiB4Mj0iMjgyLjg2IiB5Mj0iMzc3LjA4IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agb2Zmc2V0PSIuMiIgc3RvcC1jb2xvcj0iI2JhOTI1OCI+PC9zdG9wPjxzdG9wIG9mZnNldD0iLjMzIiBzdG9wLWNvbG9yPSIjY2JhMDYzIj48L3N0b3A+PHN0b3Agb2Zmc2V0PSIuNTEiIHN0b3AtY29sb3I9IiNlZGJjN2EiPjwvc3RvcD48c3RvcCBvZmZzZXQ9Ii41NCIgc3RvcC1jb2xvcj0iI2UzYjQ3MyI+PC9zdG9wPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjYzA5ODVlIj48L3N0b3A+PHN0b3Agb2Zmc2V0PSIuNzkiIHN0b3AtY29sb3I9IiNhYTg4NTEiPjwvc3RvcD48c3RvcCBvZmZzZXQ9Ii44NyIgc3RvcC1jb2xvcj0iI2EzODI0ZCI+PC9zdG9wPjwvbGluZWFyR3JhZGllbnQ+PGxpbmVhckdyYWRpZW50IGlkPSJsaW5lYXItZ3JhZGllbnQtMiIgeDE9IjIxMS42OSIgeTE9Ijg0Ljg0IiB4Mj0iMjExLjY5IiB5Mj0iMTAxIiB4bGluazpocmVmPSIjbGluZWFyLWdyYWRpZW50Ij48L2xpbmVhckdyYWRpZW50PjxsaW5lYXJHcmFkaWVudCBpZD0ibGluZWFyLWdyYWRpZW50LTMiIHgxPSIzNC4wMiIgeTE9IjQwMC42IiB4Mj0iMzQuMDIiIHkyPSI0NjAuNjIiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBvZmZzZXQ9Ii4wMyIgc3RvcC1jb2xvcj0iI2JhOTI1OCI+PC9zdG9wPjxzdG9wIG9mZnNldD0iLjIzIiBzdG9wLWNvbG9yPSIjY2JhMDYzIj48L3N0b3A+PHN0b3Agb2Zmc2V0PSIuNTEiIHN0b3AtY29sb3I9IiNlZGJjN2EiPjwvc3RvcD48c3RvcCBvZmZzZXQ9Ii41NiIgc3RvcC1jb2xvcj0iI2UzYjQ3MyI+PC9zdG9wPjxzdG9wIG9mZnNldD0iLjczIiBzdG9wLWNvbG9yPSIjYzA5ODVlIj48L3N0b3A+PHN0b3Agb2Zmc2V0PSIuODgiIHN0b3AtY29sb3I9IiNhYTg4NTEiPjwvc3RvcD48c3RvcCBvZmZzZXQ9Ii45OCIgc3RvcC1jb2xvcj0iI2EzODI0ZCI+PC9zdG9wPjwvbGluZWFyR3JhZGllbnQ+PGxpbmVhckdyYWRpZW50IGlkPSJsaW5lYXItZ3JhZGllbnQtNCIgeDE9IjEyNC44IiB4Mj0iMTI0LjgiIHhsaW5rOmhyZWY9IiNsaW5lYXItZ3JhZGllbnQtMyI+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImxpbmVhci1ncmFkaWVudC01IiB4MT0iMjE1LjU3IiB4Mj0iMjE1LjU3IiB4bGluazpocmVmPSIjbGluZWFyLWdyYWRpZW50LTMiPjwvbGluZWFyR3JhZGllbnQ+PGxpbmVhckdyYWRpZW50IGlkPSJsaW5lYXItZ3JhZGllbnQtNiIgeDE9IjI5NS45MiIgeDI9IjI5NS45MiIgeGxpbms6aHJlZj0iI2xpbmVhci1ncmFkaWVudC0zIj48L2xpbmVhckdyYWRpZW50PjxsaW5lYXJHcmFkaWVudCBpZD0ibGluZWFyLWdyYWRpZW50LTciIHgxPSIzNzMuNjUiIHgyPSIzNzMuNjUiIHkyPSI0NjEuNjkiIHhsaW5rOmhyZWY9IiNsaW5lYXItZ3JhZGllbnQtMyI+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImxpbmVhci1ncmFkaWVudC04IiB4MT0iNDUyLjM4IiB4Mj0iNDUyLjM4IiB4bGluazpocmVmPSIjbGluZWFyLWdyYWRpZW50LTMiPjwvbGluZWFyR3JhZGllbnQ+PGxpbmVhckdyYWRpZW50IGlkPSJsaW5lYXItZ3JhZGllbnQtOSIgeDE9IjUyNS45OCIgeDI9IjUyNS45OCIgeGxpbms6aHJlZj0iI2xpbmVhci1ncmFkaWVudC0zIj48L2xpbmVhckdyYWRpZW50PjxsaW5lYXJHcmFkaWVudCBpZD0ibGluZWFyLWdyYWRpZW50LTEwIiB4MT0iMTQxLjk0IiB5MT0iNDgxLjU3IiB4Mj0iMTQxLjk0IiB5Mj0iNTIwLjE2IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjYmE5MjU4Ij48L3N0b3A+PHN0b3Agb2Zmc2V0PSIuMjEiIHN0b3AtY29sb3I9IiNjYmEwNjMiPjwvc3RvcD48c3RvcCBvZmZzZXQ9Ii41MSIgc3RvcC1jb2xvcj0iI2VkYmM3YSI+PC9zdG9wPjxzdG9wIG9mZnNldD0iLjU2IiBzdG9wLWNvbG9yPSIjZTNiNDczIj48L3N0b3A+PHN0b3Agb2Zmc2V0PSIuNzUiIHN0b3AtY29sb3I9IiNjMDk4NWUiPjwvc3RvcD48c3RvcCBvZmZzZXQ9Ii45IiBzdG9wLWNvbG9yPSIjYWE4ODUxIj48L3N0b3A+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjYTM4MjRkIj48L3N0b3A+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImxpbmVhci1ncmFkaWVudC0xMSIgeDE9IjE4MS4zOSIgeDI9IjE4MS4zOSIgeGxpbms6aHJlZj0iI2xpbmVhci1ncmFkaWVudC0xMCI+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImxpbmVhci1ncmFkaWVudC0xMiIgeDE9IjIxMS40MyIgeDI9IjIxMS40MyIgeGxpbms6aHJlZj0iI2xpbmVhci1ncmFkaWVudC0xMCI+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImxpbmVhci1ncmFkaWVudC0xMyIgeDE9IjI0Mi42NSIgeDI9IjI0Mi42NSIgeGxpbms6aHJlZj0iI2xpbmVhci1ncmFkaWVudC0xMCI+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImxpbmVhci1ncmFkaWVudC0xNCIgeDE9IjMwMS4zMyIgeTE9IjQ4MC44NSIgeDI9IjMwMS4zMyIgeTI9IjUyMC44OCIgeGxpbms6aHJlZj0iI2xpbmVhci1ncmFkaWVudC0xMCI+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImxpbmVhci1ncmFkaWVudC0xNSIgeDE9IjM0Mi43NCIgeDI9IjM0Mi43NCIgeGxpbms6aHJlZj0iI2xpbmVhci1ncmFkaWVudC0xMCI+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImxpbmVhci1ncmFkaWVudC0xNiIgeDE9IjM4MC41OSIgeDI9IjM4MC41OSIgeTI9IjUyMC44OCIgeGxpbms6aHJlZj0iI2xpbmVhci1ncmFkaWVudC0xMCI+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImxpbmVhci1ncmFkaWVudC0xNyIgeDE9IjQyMy4zNCIgeDI9IjQyMy4zNCIgeGxpbms6aHJlZj0iI2xpbmVhci1ncmFkaWVudC0xMCI+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PGcgaWQ9InRyaXBfY2x1Yl9JbWFnZSIgZGF0YS1uYW1lPSJ0cmlwIGNsdWImI3hBMDtJbWFnZSI+PGc+PHBhdGggZD0iTTQwNy44MSwxODguNzZjMCwyMS4zOC4xMSw0Mi43Ni0uMDMsNjQuMTQtLjE5LDI5LjUyLTkuNzIsNTUuNzgtMjguNDgsNzguNTMtMTguNjYsMjIuNjQtNDIuNSwzNy4xLTcxLjI2LDQyLjk4LTI2Ljc1LDUuNDgtNTIuNjgsMi40OS03Ny41Ny04LjkxLTE1LjIyLTYuOTctMjguNS0xNi42Ni0zOS43NS0yOS4wMS0xNy41My0xOS4yNS0yOC4yMS00MS43OC0zMS43Ni02Ny42My0uOC01LjgxLTEuMTEtMTEuNjQtMS4xMS0xNy41MS4wNC00Mi4yLS4wNi04NC40LjA2LTEyNi42LjA5LTMxLjI2LDEwLjU1LTU4Ljc1LDMxLjE1LTgyLjIyQzIwOC41MywyMC4zNywyMzIuOTgsNi43NCwyNjIuMDUsMS44M2MyNS4zOC00LjI4LDQ5Ljk0LTEuMDksNzMuMzMsOS44NCwyNS40LDExLjg3LDQ0LjcyLDMwLjI1LDU3Ljk2LDU0Ljk3LDcuNTMsMTQuMDYsMTIuMSwyOS4wNiwxMy43Nyw0NC45My40Niw0LjQuNzEsOC44MS43MSwxMy4yNC0uMDIsMjEuMzItLjAxLDQyLjY0LS4wMSw2My45NWguMDJaTTE5NS45Miw3MC4wN2MtLjUzLjgyLTEuMTUuNzYtMS42Ni45LTUuOTUsMS42Ni0xMC4wMSw2LjM2LTEwLjQyLDEyLjQ4LS4xMywxLjg1LS43MSwyLjM3LTIuNSwyLjU1LTMuNjYuMzctNi41NywxLjg5LTcuMjMsNi4wMy0uMTgsMS4xNi0uNTUsMi4zMi0uOTksMy40MS0xLjIyLDMuMDEtLjA3LDUuMzQsMi4wMiw3LjQsMS45MSwxLjg5LDQuMjksMi43NCw2Ljk0LDIuNzYsNC4zNi4wNCw4LjczLjAzLDEzLjA5LjAyLjM3LDAsLjg5LjIyLDEuMTEtLjQ3LTQuOTYtMy42Mi04LjYxLTguMjQtMTAuNjktMTQuMzYuNzQuMzcuNzguODUuOTgsMS4yMiw0LjYxLDguNzEsMTEuNDksMTMuOTEsMjEuNjcsMTQuMDIsMSwuMDEsMiwuMDMsMi45OS4xMSw0LjEzLjM3LDcuNC0xLjEyLDkuOTQtNC4zOS45My0xLjE5LDEuMjktMi42NiwyLjA5LTQuMTQuMjgsMS4zMS0uMDgsMi4yNS0uNDUsMy4xNi0yLjI1LDUuNTktNi43Miw3LjY1LTEyLjQxLDcuODgtOC45MS4zNy0xNy44Mi4zNC0yNi43Mi40OC00LjczLjA4LTguNzItMS4wOC0xMS44OS00LjY3LS4xLS4xMS0uMzItLjEyLS41Ny0uMi0uMDguMzUtLjE2LjY0LS4yMS45NC0xLjE5LDYuNjQtMS44MywxMy4zMi0xLjgzLDIwLjA2LDAsMzQuODQsMCw2OS42OSwwLDEwNC41MywwLC40NC4wNC44OCwwLDEuMzEtLjExLDEuMTYuNDgsMS43LDEuNTYsMS45LDYuMDksMS4xOCwxMi4xMiwxLjExLDE4LjEzLS41OCw1LjQ5LTEuNTQsMTAuMDEtNC43NiwxNC4yNC04LjM3LDkuOTUtOC40OCwyMS4yNC0xMi4yNSwzNC4yOC0xMC4zNi40Mi4wNiwxLjAyLjE2LDEuMjUtLjA1LjQ1LS40My0uMDktLjkxLS4zLTEuMzEtMi41Ni00Ljg0LTQuMzItOS45Ny01LjA1LTE1LjM4LS4yOC0yLjAzLTEuMDktMi43MS0yLjk4LTIuOTUtOS41Ny0xLjIyLTE5LjE0LTIuNTQtMjguNy0zLjg0LTIuOTEtLjQtNS44Mi0uODQtOS4wNy0xLjMyLjQ5LS4zMS42Mi0uNDUuNzgtLjQ4LDUuNzQtLjc4LDExLjQ4LTEuNTQsMTcuMjItMi4zMiw2LjkxLS45NCwxMy44Mi0xLjkxLDIwLjczLTIuODYuOTktLjE0LDEuNy0uMzQsMS44OC0xLjYsMS4yNy04LjY5LDQuNTgtMTYuNTQsOS45NC0yMy41Ljc5LTEuMDMuNzktMS43NSwwLTIuNzctMy4zMS00LjIxLTYuNTUtOC40OC05LjgxLTEyLjczLS4zLS40LS43OS0uNzYtLjQ3LTEuNTMuNDEuMjcuNzMuNDQsMS4wMi42Niw0LjIsMy4yMiw4LjQyLDYuNDIsMTIuNTgsOS43LDEuMTUuOTEsMS44OS44OSwzLjAxLS4xMSw3LjU4LTYuOCwxNi40Mi0xMC45NywyNi41Mi0xMi4zOSwxLjE2LS4xNiwxLjU1LS42NiwxLjctMS43NywxLjM2LTEwLjI1LDIuNzMtMjAuNSw0LjE4LTMwLjczLjI4LTEuOTUuMjQtMy45OSwxLjAyLTUuOTguNTIuNDkuNDMuOTUuNDksMS4zNywxLjYxLDExLjcyLDMuMjMsMjMuNDUsNC43OSwzNS4xOC4xNiwxLjE5LjU5LDEuNzQsMS44MSwxLjksMTAuMTksMS4zNCwxOS4wOSw1LjU0LDI2LjczLDEyLjM2LDEuMTgsMS4wNSwxLjkxLjksMywuMDQsNC4wMS0zLjE2LDguMDctNi4yNiwxMi4xMy05LjM3LjMyLS4yNS42My0uNjQsMS4xNS0uMzguMTIuNjctLjQ0Ljk4LS43NiwxLjQtMy4xNCw0LjExLTYuMjcsOC4yMy05LjQ0LDEyLjMxLS42Ny44Ni0uOCwxLjQ2LS4wNCwyLjQxLDUuNDQsNi44Miw4Ljc4LDE0LjYxLDEwLjE2LDIzLjIuMjYsMS42Mi45MywyLjE2LDIuNDcsMi4zNiwxMC42OCwxLjQsMjEuMzUsMi44OSwzMi4wMyw0LjM1LDIuMS4yOSw0LjE5LjYxLDYuMjguOTEtMy4wMy44NC02LjAzLDEuMjgtOS4wMywxLjY5LTkuODcsMS4zNi0xOS43NCwyLjczLTI5LjYyLDQuMDMtMS4zOC4xOC0xLjgzLjc2LTIuMDMsMi4xMS0uNzcsNS4zNC0yLjM1LDEwLjQ1LTQuODEsMTUuMjctLjMzLjY1LTEuMTQsMS40My0uNzIsMS45OS40OC42NywxLjQ5LjEsMi4yNi4wMiw4LjM1LS44OSwxNi40MS0uMTIsMjMuOTgsMy44OCw0LjgzLDIuNTUsOC45OCw2LjA3LDEzLjI2LDkuMzgsOC4wNiw2LjIyLDE3LjE0LDcuOTIsMjcsNi40MywyLjY0LS40LDIuNjQtLjQ2LDIuNjQtMy4yMSwwLTM1LjA5LDAtNzAuMTkuMDItMTA1LjI4LDAtNC40My0uMzMtOC44NS0uODYtMTMuMjMtMS43NC0xNC41Mi02LjE4LTI4LjItMTMuMTktNDEuMDQtLjYxLTEuMTItMS4yOC0yLjItMi4wNC0zLjUxLS4xOC40OC0uMjguNjMtLjMuOC0xLjA0LDExLjM2LTkuMjIsMTkuODItMjAuNDgsMjAuNjctOC4wNy42MS0xNi4xNy45MS0yNC4yNiwxLjA0LTEyLjA5LjE5LTI0LjE4LjEtMzYuMjguMTItLjkzLDAtMS44OC0uMDItMi43OS0uMTctMTMuNjctMi4zOC0yMi43Mi0xNi4wMi0xOS42NC0yOS41NCwyLjI0LTkuODEsMTAuMTctMTcuMTMsMjAuMTMtMTguNjUsMy40NS0uNTMsMy4wNS0uMSwzLjc2LTMuMjUsMS42LTcuMDksNS4zLTEyLjg0LDExLjIxLTE3LjEzLDEuOS0xLjM4LDMuOTgtMi40Niw2LjIyLTMuNC0uNjYtLjg0LTEuNDUtLjg2LTIuMTMtMS4wNi0xNC41LTQuMjgtMjkuMjUtNS44Ny00NC4zNC00LjMyLTEzLjQxLDEuMzgtMjYuMTksNC45LTM4LjI5LDEwLjgyLTIwLjQyLDEwLTM2LjQ2LDI0LjgtNDguMTcsNDQuMjgtMi45Myw0Ljg3LTUuNDMsOS45Ni03LjU0LDE1LjIzLS4xOC40NC0uODEsMS4wMS0uMDksMS40Ni44Mi41MSwzLjg1LS45MSw0LjEyLTEuOTIuNjgtMi41LDEuNjUtNC44NSwzLjM4LTYuODEsMi44NC0zLjIxLDYuNDItNC45LDEwLjk1LTUuMTRaTTE2OS4xOCwyNDguMDJjLS4xMiw4LjY4LjUxLDE3LjMsMi4yMiwyNS44My4xOS45NC4zMywxLjg0LDEuNTcsMiw2LjczLjg1LDEzLjMuNDgsMTkuNi0yLjMyLDUuNDQtMi40MSw5Ljc1LTYuNDUsMTQuNDQtOS45MywxMy4yMi05LjgxLDMwLjg2LTEwLjY5LDQ0LjgyLTIuMDksNC4xNSwyLjU1LDcuNzksNS44MSwxMS43MSw4LjY4LDEwLjYsNy43NywyNi43Myw4LjIsMzcuNzQsMS4wMiwzLjg3LTIuNTIsNy4yOS01LjY0LDExLjExLTguMjQsMTIuNzgtOC43MSwyNi4yNi05LjYxLDQwLjI4LTMuNDMsNS41NCwyLjQ0LDkuOTUsNi42MSwxNC43MSwxMC4yMSw3LjIyLDUuNDYsMTUuMzgsNy4wNSwyNC4xOSw2LjM4LDEuNjQtLjEyLDIuNDYtLjc2LDIuODItMi41NCwyLjE0LTEwLjcxLDIuMjMtMjEuNTQsMi4xMy0zMi4zOXEtLjAyLTIuMjQtMi4zMy0xLjkzYy0xMS42NywxLjU5LTIyLjI5LS44Mi0zMS42MS04LjI3LTIuNDMtMS45NS00Ljg4LTMuODktNy40NC01LjY2LTEwLjk2LTcuNTQtMjIuNTctOC4xNy0zNC41OC0yLjg5LTQuOSwyLjE1LTguODIsNS44NC0xMi45Nyw5LjEyLTEzLjQ5LDEwLjY4LTM0LjI0LDEwLjg3LTQ3LjQ4Ljg5LTIuOTktMi4yNS01LjkzLTQuNTYtOC45NS02Ljc2LTEwLjIyLTcuNDQtMjEuMzMtOC4zNS0zMy4wMS00LjI0LTQuODQsMS43LTguNzYsNS4wMS0xMi42Miw4LjI1LTEwLjEsOC40Ny0yMS41OCwxMS41NS0zNC41Miw5LjM0LTEuMzItLjIzLTEuODYuMTUtMS44NCwxLjUuMDQsMi40OS4wMSw0Ljk5LjAxLDcuNDhaTTIzMS40MiwzMDEuMzVjLTMuMDMtLjEzLTUuNjIuMTgtOC4yLjY2LTUuOTUsMS4xMi0xMC44Miw0LjMyLTE1LjQ0LDgtNC4zNSwzLjQ1LTguNzMsNi44NS0xMy45MSw5LjAxLTIuMDEuODQtMi4wMS44Ny0uNjMsMi42NSw1LjI2LDYuNzcsMTEuMTcsMTIuOTEsMTcuODcsMTguMjUsMjQuMzIsMTkuMzcsNTEuOTYsMjcuODEsODIuOTcsMjQuOTYsMTMuNzQtMS4yNiwyNi43Ni01LjA4LDM5LjEyLTExLjE3LDEwLjAzLTQuOTQsMTkuMDYtMTEuMywyNy4yNS0xOC44OCw0LjU0LTQuMTksOC42NS04Ljc4LDEyLjM5LTEzLjcxLjUyLS42OCwxLjM0LTEuNDQtLjA5LTIuMDEtNi40Ni0yLjYyLTExLjUtNy4zNy0xNy4wOS0xMS4zMi0xMS4yMy03LjkzLTIzLjE3LTguNjMtMzUuNTYtMy4wNS0zLjgzLDEuNzMtNy4wMyw0LjQ4LTEwLjI1LDcuMTQtMTEuMTgsOS4yMi0yMy43OSwxMi4wOS0zNy44MSw4LjQ4LTYuNTUtMS42OC0xMS45Ni01LjUtMTcuMDctOS43NC02Ljk3LTUuNzgtMTQuNi05Ljc1LTIzLjU3LTkuMjlaTTIzMC45NSwyOTUuNjdjNy41OC4wMywxNC43MywxLjc3LDIxLjA4LDYsMy43OCwyLjUyLDcuMyw1LjQyLDEwLjk3LDguMSwxMC4yMyw3LjQ3LDIxLjM3LDguMjEsMzMuMDMsNC4xNyw1LjIxLTEuODEsOS4zLTUuNTEsMTMuNTEtOC45LDkuNzQtNy44NSwyMC43My0xMC43NCwzMy4wNy04Ljc2LDcuNzEsMS4yNCwxNC4xLDUuMDUsMjAuMDYsOS44MywzLjk0LDMuMTYsNy45MSw2LjI3LDEyLjcsOC4xMywxLjQxLjU1LDIuMjYuMzQsMy4xLS45OCw1LjkxLTkuMzIsMTAuNDYtMTkuMjUsMTMuNTQtMjkuODYuNDItMS40NS4yLTEuODMtMS40MS0xLjcxLTYuOTYuNTItMTMuNjQtLjU5LTE5Ljk5LTMuNjEtNS41Mi0yLjYzLTkuOTUtNi44Mi0xNC44OC0xMC4yOS0xMS4zMS03Ljk1LTIzLjI5LTguNjYtMzUuNzQtMy4wMS0zLjYsMS42My02LjYzLDQuMi05LjY2LDYuNjktNy4wMSw1Ljc2LTE0Ljc2LDkuNjgtMjMuOTgsMTAuMjQtNy42Mi40Ny0xNC44OS0uNzItMjEuNjgtNC4zNy00LjctMi41Mi04Ljc5LTUuOTItMTIuOS05LjIzLTExLjUtOS4yNi0yOS45NS04Ljg1LTQwLjM3LS44NS0yLjg2LDIuMi01Ljc0LDQuMzktOC42Myw2LjU2LTguMTgsNi4xNC0xNy4zOCw4LjczLTI3LjU2LDcuOC0xLjgtLjE3LTEuOTkuMDQtMS40OCwxLjgyLDIuODYsOS45NCw3LjAxLDE5LjMxLDEyLjQ3LDI4LjEsMi40MywzLjksMi4zOCwzLjgzLDYuNjIsMS44OSw0LjcxLTIuMTcsOC42LTUuNDksMTIuNjEtOC42NCw3LjUtNS45MSwxNS44OS05LjIzLDI1LjUzLTkuMTNaTTM2MS42OSw0My43N2MtLjEtLjI5LS4xMS0uNDMtLjE4LS41MS0uMi0uMjQtLjQxLS40Ny0uNjQtLjY4LTExLjMxLTEwLjU0LTI0LjE0LTE4LjYxLTM4LjY0LTI0LS45Mi0uMzQtMS42OC0uMi0yLjQ5LjIzLTkuNTcsNS4wMS0xNC45NSwxMi43MS0xNS4xOSwyMy42OS0uMDcsMy4wMi0uMSwzLjEtMy4xMSwzLjMtLjI1LjAyLS41LjAyLS43NS4wMy0xMS43Ni4zNy0yMC4yMiwxMS0xNy45OSwyMi42LDEuNjIsOC40NSw4Ljk2LDE0LjY2LDE3LjU1LDE0LjgyLDYuNzIuMTMsMTMuNDUtLjE2LDIwLjE4LjI1LDMuMDguMTksNi4xNy4wMyw5Ljg5LjAzLTExLjc4LTcuOTItMTkuMzYtMTguMjQtMjMuMjMtMzEuNTIuMzQuMTQuNDMuMTQuNDQuMTguMjIuNTEuNDQsMS4wMy42NCwxLjU1LDMuMTMsOC4yMyw4LjEsMTUuMTIsMTUsMjAuNTksNi40Niw1LjExLDEzLjY1LDguNzEsMjEuOSw5LjgyLDMuNzYuNTEsNy41OS4wNiwxMS4zOC40MywxMC45NCwxLjA3LDIwLjMxLTUuNiwyMi45Ni0xNi4xMS40Mi0xLjY2LjE3LTMuMDEtLjc1LTQuNDEtMi4yNy0zLjQzLTQuNjktNi43NS03LjE5LTEwLjAyLTEuMDgtMS40MS0yLjQyLTIuMjYtNC4wOS0yLjc3LTEyLjMzLTMuNzctMjQuODksMy44My0yNy4zMSwxNi40OS0uNDksMi41OS0uMzMsNS4xNi0uMDIsNy45My0zLjU0LTQuMDMtNC4yNy0xMi44OS0xLjI4LTE5LjE5LDQuNTMtOS41NSwxMi40Mi0xMy40NSwyMi45Mi0xMi43NFoiIHN0eWxlPSJmaWxsOiB1cmwoI2xpbmVhci1ncmFkaWVudCk7Ij48L3BhdGg+PHBhdGggZD0iTTIwMi4xNiwxMDFjLTIuMDItMy41NC0xLjktNy4xMS4xMS0xMC41MiwyLjMxLTMuOTIsNS45MS01Ljk0LDEwLjQzLTUuNjEsNC45OC4zNiw4LjMzLDMuMTYsOS45OSw4LjAzLTMuNjktNC4xNC04LjE3LTUuNjktMTMuMzUtMy43LTUuMjYsMi4wMi03LjI0LDYuMjktNy4xOCwxMS44WiIgc3R5bGU9ImZpbGw6IHVybCgjbGluZWFyLWdyYWRpZW50LTIpOyI+PC9wYXRoPjwvZz48L2c+PGcgaWQ9IkxheWVyXzMiIGRhdGEtbmFtZT0iTGF5ZXIgMyI+PHBhdGggZD0iTTY4LjA1LDQ2MC42MmgtMTQuMThsLTUuODEtMTMuOThoLTI4LjQxbC01LjgxLDEzLjk4SDBsMjUuOTQtNjAuMDJoMTYuMThsMjUuOTMsNjAuMDJaTTI0LjIyLDQzNS42M2gxOS4yN2wtOS42MS0yMy4xOS05LjY2LDIzLjE5WiIgc3R5bGU9ImZpbGw6IHVybCgjbGluZWFyLWdyYWRpZW50LTMpOyI+PC9wYXRoPjxwYXRoIGQ9Ik0xNjEuNTYsNDYwLjYyaC0xMy4yOHYtNDUuMzFsLTE2LjQ2LDM5LjUzaC0xNC4wNGwtMTYuNDYtMzkuMTh2NDQuOTdoLTEzLjI4di02MC4wMmgxOS40NmwxNy4zMiw0MC41MSwxNy4yNy00MC41MWgxOS40NnY2MC4wMloiIHN0eWxlPSJmaWxsOiB1cmwoI2xpbmVhci1ncmFkaWVudC00KTsiPjwvcGF0aD48cGF0aCBkPSJNMjQ5LjU5LDQ2MC42MmgtMTQuMThsLTUuODEtMTMuOThoLTI4LjQxbC01LjgxLDEzLjk4aC0xMy44NWwyNS45NC02MC4wMmgxNi4xOGwyNS45Myw2MC4wMlpNMjA1Ljc2LDQzNS42M2gxOS4yN2wtOS42MS0yMy4xOS05LjY2LDIzLjE5WiIgc3R5bGU9ImZpbGw6IHVybCgjbGluZWFyLWdyYWRpZW50LTUpOyI+PC9wYXRoPjxwYXRoIGQ9Ik0yOTcuNzUsNDAwLjZjMy45NywwLDcuNDcuNDIsMTAuNTIsMS4yNCwzLjA1LjgzLDUuNiwyLjAyLDcuNjYsMy41OCwyLjA2LDEuNTYsMy42MiwzLjQ3LDQuNjYsNS43NCwxLjA1LDIuMjcsMS41Nyw0Ljg0LDEuNTcsNy43LDAsMi40Ni0uNDYsNC43Mi0xLjM4LDYuNzctLjkyLDIuMDYtMi4yNiwzLjg0LTQuMDIsNS4zNi0xLjc2LDEuNTItMy45LDIuNzUtNi40MiwzLjcxLTIuNTIuOTYtNS4zOSwxLjU4LTguNTksMS44NmwyMC41MSwyNC4wNWgtMTYuMDhsLTE5LjQyLTIzLjg4aC0zLjl2MjMuODhoLTEzLjI4di02MC4wMmgyOC4xN1pNMjgyLjg2LDQxMS42MnYxNC43aDE0LjY2YzMuNjUsMCw2LjM5LS42MSw4LjIzLTEuODIsMS44NC0xLjIyLDIuNzYtMy4wOSwyLjc2LTUuNjRzLS45NC00LjM1LTIuODMtNS41MWMtMS44OS0xLjE2LTQuNjEtMS43NC04LjE2LTEuNzRoLTE0LjY2WiIgc3R5bGU9ImZpbGw6IHVybCgjbGluZWFyLWdyYWRpZW50LTYpOyI+PC9wYXRoPjxwYXRoIGQ9Ik00MDIuMzUsNDM2LjY2YzAsNC4xNC0uNyw3Ljc4LTIuMDksMTAuOTEtMS40LDMuMTMtMy4zNiw1Ljc0LTUuOSw3LjgyLTIuNTQsMi4wOS01LjU3LDMuNjYtOS4wOSw0LjcyLTMuNTIsMS4wNi03LjM5LDEuNTktMTEuNjEsMS41OXMtOC4xMy0uNTMtMTEuNjQtMS41OS02LjUzLTIuNjMtOS4wNy00LjcyYy0yLjU0LTIuMDktNC41MS00LjY5LTUuOS03LjgyLTEuNC0zLjEzLTIuMDktNi43Ny0yLjA5LTEwLjkxdi0zNi4wNWgxMy4zM3YzNS40NWMwLDIuNDYuMzcsNC41OCwxLjEyLDYuMzcuNzUsMS43OSwxLjc5LDMuMjYsMy4xNCw0LjQyczIuOTcsMi4wMiw0Ljg2LDIuNTdjMS44OS41NiwzLjk3Ljg0LDYuMjYuODRzNC4zNy0uMjgsNi4yNi0uODRjMS44OS0uNTYsMy41LTEuNDIsNC44NS0yLjU3LDEuMzUtMS4xNiwyLjM5LTIuNjMsMy4xNC00LjQyLjc0LTEuNzksMS4xMi0zLjkxLDEuMTItNi4zN3YtMzUuNDVoMTMuMzN2MzYuMDVaIiBzdHlsZT0iZmlsbDogdXJsKCNsaW5lYXItZ3JhZGllbnQtNyk7Ij48L3BhdGg+PHBhdGggZD0iTTQ3Ni42Myw0NjAuNjJoLTQ4LjQ5di02MC4wMmgxMy4yOHY0OC44M2gzNS4yMXYxMS4xOVoiIHN0eWxlPSJmaWxsOiB1cmwoI2xpbmVhci1ncmFkaWVudC04KTsiPjwvcGF0aD48cGF0aCBkPSJNNTYwLDQ2MC42MmgtMTQuMThsLTUuODEtMTMuOThoLTI4LjQxbC01LjgxLDEzLjk4aC0xMy44NWwyNS45My02MC4wMmgxNi4xOGwyNS45Myw2MC4wMlpNNTE2LjE3LDQzNS42M2gxOS4yN2wtOS42MS0yMy4xOS05LjY2LDIzLjE5WiIgc3R5bGU9ImZpbGw6IHVybCgjbGluZWFyLWdyYWRpZW50LTkpOyI+PC9wYXRoPjxwYXRoIGQ9Ik0xNTYuNzUsNDgxLjU3djguNTVoLTEwLjU1djMwLjA1aC04LjUxdi0zMC4wNWgtMTAuNTd2LTguNTVoMjkuNjNaIiBzdHlsZT0iZmlsbDogdXJsKCNsaW5lYXItZ3JhZGllbnQtMTApOyI+PC9wYXRoPjxwYXRoIGQ9Ik0xNjYuNzQsNDgxLjU3aDE1LjUyYzQuMzUsMCw3LjY5LDEuMDksMTAuMDEsMy4yOCwyLjMzLDIuMTksMy40OSw1LjIxLDMuNDksOS4wNywwLDMuMDktLjg3LDUuNjQtMi42LDcuNjYtMS43MywyLjAyLTQuMTksMy4zMS03LjM2LDMuODZsMTAuMjQsMTQuNzJoLTEwLjE0bC05LjQtMTQuNDVoLTEuMjV2MTQuNDVoLTguNTF2LTM4LjZaTTE4Mi4xNSw0ODkuOTJoLTYuOXY4LjA1aDYuOWMxLjU2LDAsMi43OC0uMzQsMy42NC0xLjAyLjg3LS42OCwxLjMtMS42OSwxLjMtMy4wM3MtLjQ0LTIuMzItMS4zMS0yLjk5Yy0uODgtLjY3LTIuMDktMS4wMS0zLjYzLTEuMDFaIiBzdHlsZT0iZmlsbDogdXJsKCNsaW5lYXItZ3JhZGllbnQtMTEpOyI+PC9wYXRoPjxwYXRoIGQ9Ik0yMTUuNjgsNDgxLjU3djM4LjZoLTguNTF2LTM4LjZoOC41MVoiIHN0eWxlPSJmaWxsOiB1cmwoI2xpbmVhci1ncmFkaWVudC0xMik7Ij48L3BhdGg+PHBhdGggZD0iTTI0My42Myw1MDcuMTJoLTYuODV2MTMuMDRoLTguNTF2LTM4LjZoMTUuMjljNC4zMywwLDcuNjYsMS4xNiw5Ljk5LDMuNDcsMi4zMywyLjMyLDMuNDksNS40NSwzLjQ5LDkuNHMtMS4xNiw2Ljk2LTMuNDksOS4yNWMtMi4zMywyLjI5LTUuNjMsMy40My05LjkxLDMuNDNaTTI0My40Myw0ODkuOTJoLTYuNjV2OC45OWg2LjY1YzEuNTUsMCwyLjc2LS4zOSwzLjYzLTEuMTYuODgtLjc3LDEuMzEtMS44NywxLjMxLTMuMzFzLS40NC0yLjU3LTEuMzEtMy4zNWMtLjg4LS43OC0yLjA4LTEuMTctMy42My0xLjE3WiIgc3R5bGU9ImZpbGw6IHVybCgjbGluZWFyLWdyYWRpZW50LTEzKTsiPjwvcGF0aD48cGF0aCBkPSJNMzAyLjc5LDQ4MC44NWMzLjQxLDAsNi41My44Miw5LjM1LDIuNDcsMi44MiwxLjY0LDQuOTgsMy45Miw2LjUsNi44MmwtNy40Nyw0LjYzYy0uOTMtMS42NS0yLjEyLTIuOTItMy41Ny0zLjc5LTEuNDQtLjg3LTMuMDgtMS4zMS00LjkyLTEuMzEtMi44NCwwLTUuMTgsMS4wNC03LjAzLDMuMTMtMS44NSwyLjA5LTIuNzgsNC43Ny0yLjc4LDguMDYsMCwyLjMyLjQ2LDQuMzMsMS4zOCw2LjA1LjkyLDEuNzIsMi4xMSwzLDMuNTgsMy44NiwxLjQ3Ljg1LDMuMSwxLjI4LDQuODgsMS4yOCwzLjY0LDAsNi41MS0xLjY5LDguNjEtNS4wN2w2Ljk4LDUuMzVjLTEuNjcsMi42OC0zLjgzLDQuNzgtNi41LDYuMjktMi42NywxLjUxLTUuNjcsMi4yNi05LjAyLDIuMjYtMi43MiwwLTUuMjQtLjUtNy41Ny0xLjQ5LTIuMzMtLjk5LTQuMzEtMi4zNy01Ljk1LTQuMTItMS42NC0xLjc2LTIuOTMtMy44Ny0zLjg2LTYuMzYtLjkzLTIuNDgtMS40LTUuMTYtMS40LTguMDVzLjQ3LTUuNTcsMS40LTguMDVjLjkzLTIuNDgsMi4yMi00LjYsMy44Ni02LjM2LDEuNjQtMS43NiwzLjYyLTMuMTMsNS45NS00LjEyLDIuMzMtLjk5LDQuODUtMS40OSw3LjU3LTEuNDlaIiBzdHlsZT0iZmlsbDogdXJsKCNsaW5lYXItZ3JhZGllbnQtMTQpOyI+PC9wYXRoPjxwYXRoIGQ9Ik0zNTUuOTYsNTExLjYydjguNTVoLTI2LjQ1di0zOC42aDguNTF2MzAuMDVoMTcuOTRaIiBzdHlsZT0iZmlsbDogdXJsKCNsaW5lYXItZ3JhZGllbnQtMTUpOyI+PC9wYXRoPjxwYXRoIGQ9Ik0zOTYuMTksNDgxLjU3djIzLjAyYzAsNS4yMi0xLjM4LDkuMjQtNC4xMywxMi4wNi0yLjc1LDIuODItNi41OCw0LjIzLTExLjQ5LDQuMjNzLTguNzMtMS40MS0xMS40OC00LjIyYy0yLjc0LTIuODEtNC4xMS02Ljg0LTQuMTEtMTIuMDd2LTIzLjAyaDguNTN2MjIuNjZjMCwyLjU3LjYzLDQuNTIsMS44OSw1LjgzLDEuMjYsMS4zMSwyLjk4LDEuOTcsNS4xNywxLjk3czMuOTQtLjY2LDUuMi0xLjk3YzEuMjYtMS4zMSwxLjg4LTMuMjYsMS44OC01Ljgzdi0yMi42Nmg4LjU0WiIgc3R5bGU9ImZpbGw6IHVybCgjbGluZWFyLWdyYWRpZW50LTE2KTsiPjwvcGF0aD48cGF0aCBkPSJNNDA4LjQ1LDQ4MS41N2gxNS4zNGM0LjUsMCw3LjkxLjkzLDEwLjIzLDIuOCwyLjMyLDEuODcsMy40OCw0LjU3LDMuNDgsOC4xMiwwLDEuODYtLjQ1LDMuNS0xLjM1LDQuOTQtLjksMS40My0yLjA5LDIuNTEtMy41NywzLjIzLDEuNjMuNjIsMi45OCwxLjcxLDQuMDUsMy4yNSwxLjA3LDEuNTQsMS42MSwzLjI4LDEuNjEsNS4yMSwwLDMuNTgtMS4xNCw2LjMyLTMuNDIsOC4yMS0yLjI4LDEuODktNS42NiwyLjg0LTEwLjE0LDIuODRoLTE2LjIzdi0zOC42Wk00MjMuNTgsNDg5LjMxaC02LjYzdjcuNjFoNi42M2MzLjM2LDAsNS4wNC0xLjI4LDUuMDQtMy44M3MtMS42OC0zLjc4LTUuMDQtMy43OFpNNDI0LjI0LDUwNC42MWgtNy4yOXY3LjgzaDcuMjljMS43MiwwLDMuMDEtLjMxLDMuODktLjkyczEuMzEtMS42MiwxLjMxLTMuMDJjMC0yLjU5LTEuNzMtMy44OS01LjItMy44OVoiIHN0eWxlPSJmaWxsOiB1cmwoI2xpbmVhci1ncmFkaWVudC0xNyk7Ij48L3BhdGg+PC9nPjwvc3ZnPg=="   // data URI (data:image/svg+xml;base64,... o data:image/png;base64,...) o URL del logo. Vacío = se muestra el nombre en texto.
+};
+function brandBarHtml(){
+  const grande = state.screen==='home';
+  const inner = BRAND.LOGO_SRC
+    ? `<img src="${BRAND.LOGO_SRC}" alt="${esc(BRAND.NOMBRE)}" style="height:${grande?72:36}px; width:auto; display:block; margin:0 auto;">`
+    : `<div class="brand-word" style="font-size:${grande?'2.1rem':'1.2rem'};">AMARULA<span>TRIP CLUB</span></div>`;
+  return `<div class="brand-bar">${inner}</div>`;
+}
+
+// ---------- sonidos (sintetizados, sin ficheros externos) ----------
+function playTone(freq, duration, type, vol){
+  try{
+    const ctx = window._audioCtx || (window._audioCtx = new (window.AudioContext||window.webkitAudioContext)());
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type || 'sine'; osc.frequency.value = freq;
+    gain.gain.value = vol || 0.15;
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.stop(ctx.currentTime + duration);
+  }catch(e){ /* audio no disponible, seguimos sin sonido */ }
+}
+function sfxKill(){ playTone(180,0.15,'square',0.2); setTimeout(()=>playTone(120,0.15,'square',0.2),90); }
+function sfxReassign(){ playTone(300,0.12,'sine',0.15); setTimeout(()=>playTone(220,0.12,'sine',0.15),100); setTimeout(()=>playTone(500,0.18,'sine',0.15),200); }
+function sfxFanfare(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>playTone(f,0.28,'triangle',0.18), i*140)); }
+function sfxNotify(){ playTone(660,0.12,'sine',0.15); setTimeout(()=>playTone(880,0.12,'sine',0.15),120); }
+document.addEventListener('click', function primeAudio(){
+  try{ (window._audioCtx || (window._audioCtx = new (window.AudioContext||window.webkitAudioContext)())).resume(); }catch(e){}
+  document.removeEventListener('click', primeAudio);
+}, { once:true });
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState==='visible' && state.code && !['join','tutorial','created'].includes(state.screen)){
+    pollTick();
+  }
+});
+
+const state = {
+  screen: 'home',
+  code: null,
+  role: null,        // 'player' | 'admin' | 'spectator'
+  myPlayerId: null,
+  adminParticipaFlag: false,
+  spectatorMode: 'anon', // 'anon' | 'full'
+  photoData: null,
+  error: null,
+  pollTimer: null
+};
+
+// ---------- utilidades ----------
+function uid(){ return (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Math.random().toString(36).slice(2)); }
+function genCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let c=''; for(let i=0;i<5;i++) c += chars[Math.floor(Math.random()*chars.length)];
+  return c;
+}
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function derangement(ids){
+  if(ids.length<2) return ids.slice();
+  let perm, tries=0;
+  do{
+    perm = shuffle(ids);
+    tries++;
+    if(tries>500) break;
+  } while(perm.some((v,i)=>v===ids[i]));
+  return perm;
+}
+function resizeImage(file, maxSize=480){
+  // Calidad alta pero acotada: Google Sheets no admite más de 50.000 caracteres por celda,
+  // así que se comprime de forma adaptativa hasta quedar por debajo de ese límite con margen.
+  const LIMIT = 45000;
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let size = maxSize, quality = 0.85, out = null;
+        for(let i=0;i<12;i++){
+          let w=img.width, h=img.height;
+          if(w>h){ if(w>size){ h=Math.round(h*size/w); w=size; } }
+          else { if(h>size){ w=Math.round(w*size/h); h=size; } }
+          const canvas = document.createElement('canvas');
+          canvas.width=w; canvas.height=h;
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img,0,0,w,h);
+          out = canvas.toDataURL('image/jpeg',quality);
+          if(out.length <= LIMIT) break;
+          if(quality > 0.62) quality -= 0.08; else size = Math.round(size*0.85);
+        }
+        resolve(out);
+      };
+      img.onerror=reject;
+      img.src=e.target.result;
+    };
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+async function loadGame(code){
+  try{
+    const url = `${CONFIG.APPS_SCRIPT_URL}?code=${encodeURIComponent(code)}&key=${encodeURIComponent(CONFIG.SECRET_KEY)}`;
+    const res = await fetch(url);
+    const json = await res.json();
+    if(json.error){ console.error('Error backend:', json.error); return null; }
+    return json.found ? JSON.parse(json.data) : null;
+  }catch(e){ console.error(e); return undefined; } // undefined = fallo de conexión, distinto de "no existe" (null)
+}
+async function ensurePhotos(g){
+  if(!g || !g.jugadores) return;
+  state.photoCache = state.photoCache || {};
+  const missing = g.jugadores.map(j=>j.id).filter(id=>!(id in state.photoCache));
+  if(missing.length===0) return;
+  try{
+    const url = `${CONFIG.APPS_SCRIPT_URL}?action=fotos&code=${encodeURIComponent(state.code)}&ids=${encodeURIComponent(missing.join(','))}&key=${encodeURIComponent(CONFIG.SECRET_KEY)}`;
+    const res = await fetch(url);
+    const json = await res.json();
+    if(json.fotos){ Object.assign(state.photoCache, json.fotos); render(); }
+  }catch(e){ console.error(e); }
+}
+function photoOf(id){ return (state.photoCache && state.photoCache[id]) || null; }
+async function saveGame(code, obj){
+  try{
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'}, // evita el preflight CORS que Apps Script no soporta
+      body: JSON.stringify({ key: CONFIG.SECRET_KEY, code, data: JSON.stringify(obj) })
+    });
+    const json = await res.json();
+    return !!json.ok;
+  }catch(e){ console.error(e); return false; }
+}
+async function callAction(action, payload){
+  try{
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(Object.assign({ key: CONFIG.SECRET_KEY, action }, payload))
+    });
+    const json = await res.json();
+    if(json.error) return { ok:false, error: json.error };
+    return { ok:true, data: json.data ? JSON.parse(json.data) : null, jugadorId: json.jugadorId, esAdmin: json.esAdmin, pin: json.pin };
+  }catch(e){ console.error(e); return { ok:false, error:'red' }; }
+}
+async function saveJoin(code, jugador){ return callAction('join', { code, jugador }); }
+function saveSession(){
+  try{
+    localStorage.setItem('elasesino-session', JSON.stringify({
+      code: state.code, myPlayerId: state.myPlayerId, role: state.role
+    }));
+  }catch(e){ /* almacenamiento no disponible, no pasa nada grave */ }
+}
+function loadSession(){
+  try{ return JSON.parse(localStorage.getItem('elasesino-session') || 'null'); }
+  catch(e){ return null; }
+}
+function clearSession(){
+  try{ localStorage.removeItem('elasesino-session'); }catch(e){}
+}
+function saveProfile(data){
+  try{ localStorage.setItem('elasesino-profile', JSON.stringify(data)); }catch(e){}
+}
+function loadProfile(){
+  try{ return JSON.parse(localStorage.getItem('elasesino-profile') || '{}'); }
+  catch(e){ return {}; }
+}
+function getDeviceId(){
+  try{
+    let id = localStorage.getItem('elasesino-device-id');
+    if(!id){ id = uid(); localStorage.setItem('elasesino-device-id', id); }
+    return id;
+  }catch(e){ return uid(); }
+}
+function shareUrlFor(code){
+  const base = CONFIG.BASE_URL || location.href.split('?')[0];
+  return base + '?p=' + code;
+}
+function shareSpectatorUrlFor(code){
+  const base = CONFIG.BASE_URL || location.href.split('?')[0];
+  return base + '?e=' + code;
+}
+function trySetSpectatorFull(){
+  if(state._game && state._game.modoEspectador==='completo'){ state.spectatorMode='full'; render(); }
+}
+function copyLink(url){
+  navigator.clipboard.writeText(url).then(()=>alert('Enlace copiado')).catch(()=>alert(url));
+}
+
+// ---------- transiciones de estado tras poll ----------
+function checkNuevasSolicitudes(g){
+  const soyOrganizador = state.role==='admin' || (state.role==='player' && g.jugadores.some(j=>j.id===state.myPlayerId && j.esAdmin));
+  if(!soyOrganizador) return;
+  const pendientes = (g.solicitudesCambio||[]).filter(s=>s.estado==='pendiente');
+  state._solicitudesVistas = state._solicitudesVistas || {};
+  const nuevas = pendientes.filter(s => !state._solicitudesVistas[s.jugadorId+':'+s.ts]);
+  if(nuevas.length){
+    nuevas.forEach(s => state._solicitudesVistas[s.jugadorId+':'+s.ts] = true);
+    sfxNotify();
+  }
+}
+
+async function pollTick(){
+  if(!state.code) return;
+  if(state.screen==='join' || state.screen==='tutorial' || state.screen==='created' || state.showKillModal) return; // no interrumpir mientras el usuario está escribiendo, leyendo el tutorial, o viendo el código para compartir
+  const g = await loadGame(state.code);
+  if(!g) return;
+  state._game = g;
+  checkNuevasSolicitudes(g);
+  ensurePhotos(g);
+  if(state.role==='player'){
+    const me = g.jugadores.find(j=>j.id===state.myPlayerId);
+    if(me){
+      if(g.estado==='finalizada'){
+        if(state.screen!=='ranking') sfxFanfare();
+        state.screen='ranking';
+        if(state.pollTimer) clearInterval(state.pollTimer);
+      }
+      else if(me.estado==='muerto'){ if(state.screen!=='dead') state.screen='dead'; }
+      else if(g.estado==='en_curso' && state.screen==='lobby'){ state.screen='game'; }
+      else if(g.estado==='en_curso' && g.ultimaReasignacion && g.ultimaReasignacion!==state.lastReassignSeen){
+        state.lastReassignSeen = g.ultimaReasignacion;
+        if(state.screen==='game'){ state.showReassignModal = true; sfxReassign(); }
+      }
+    }
+  } else if(state.role==='admin'){
+    if(g.estado==='finalizada'){
+      if(state.screen!=='ranking') sfxFanfare();
+      state.screen='ranking';
+      if(state.pollTimer) clearInterval(state.pollTimer);
+    }
+    else if(g.estado==='en_curso' && state.screen==='lobby'){ state.screen='admin-panel'; }
+  } else if(state.role==='spectator'){
+    if(g.estado==='finalizada'){
+      if(state.screen!=='ranking'){ state.screen='ranking'; sfxFanfare(); }
+      if(state.pollTimer) clearInterval(state.pollTimer);
+    }
+  }
+  render();
+}
+function startPolling(){
+  if(state.pollTimer) clearInterval(state.pollTimer);
+  state.pollTimer = setInterval(pollTick, 2500);
+}
+
+// ---------- acciones ----------
+async function actionCreateGame(participa, modoEspectador, tipoEvento, modoVisibilidad){
+  let adminNombre = null, adminPin = null;
+  if(participa===false){
+    adminNombre = document.getElementById('cfg-admin-nombre').value.trim();
+    adminPin = document.getElementById('cfg-admin-pin').value.trim();
+    if(!adminNombre || !/^\d{4}$/.test(adminPin)){
+      state.error='Pon tu nombre y un PIN de 4 números para poder recuperar el panel si sales por error.';
+      render(); return;
+    }
+  }
+  const accionesOrganizador = (state.cfgAcciones||'').split('\n')
+    .map(a=>a.trim().slice(0,120)).filter(Boolean)
+    .filter((a,i,arr)=>arr.indexOf(a)===i).slice(0,60);
+  let code = genCode();
+  for(let i=0;i<5;i++){
+    const existente = await loadGame(code);
+    if(!existente) break;
+    code = genCode();
+  }
+  const g = {
+    code, estado:'inscripcion', adminParticipa: participa, modoEspectador: modoEspectador || 'anon',
+    modoVisibilidadObjetivo: modoVisibilidad || 'visible',
+    organizadorNombre: adminNombre, organizadorPin: adminPin,
+    accionesOrganizador: accionesOrganizador,
+    tipoEvento: tipoEvento || null, creadorDeviceId: getDeviceId(),
+    creadoEn: Date.now(), iniciadoEn:null, jugadores: [], ultimaReasignacion:null, aperturasInscripcion:0
+  };
+  const ok = await saveGame(code, g);
+  if(!ok){ state.error='No se ha podido crear la partida. Revisa tu conexión e inténtalo de nuevo.'; render(); return; }
+  state.code = code;
+  state.adminParticipaFlag = participa;
+  state.error = null;
+  state._game = g;
+  state.role = participa ? 'player' : 'admin';
+  if(participa) state._pendingAdminJoin = true;
+  else saveSession();
+  state.screen = 'created';
+  startPolling();
+  render();
+}
+
+function hasSeenTutorial(){
+  try{ return localStorage.getItem('elasesino-tutorial-visto')==='1'; }catch(e){ return false; }
+}
+function markTutorialSeen(){
+  try{ localStorage.setItem('elasesino-tutorial-visto','1'); }catch(e){}
+}
+function goToJoin(){
+  const profile = loadProfile();
+  if(!state.photoData && profile.foto) state.photoData = profile.foto;
+  if(!hasSeenTutorial()){
+    state.tutorialStep = 0;
+    state.screen = 'tutorial';
+    render();
+  } else {
+    state.screen = 'join';
+    render();
+    callAction('trackOpen', { code: state.code });
+  }
+}
+function tutorialNav(delta){
+  state.tutorialStep = Math.max(0, Math.min(2, (state.tutorialStep||0)+delta));
+  render();
+}
+function finishTutorial(){
+  markTutorialSeen();
+  state.screen = 'join';
+  render();
+  callAction('trackOpen', { code: state.code });
+}
+async function actionGoJoinExisting(){
+  const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+  if(!code){ state.error='Introduce un código.'; render(); return; }
+  const g = await loadGame(code);
+  if(g===undefined){ state.error='No se ha podido conectar. Comprueba tu conexión e inténtalo de nuevo.'; render(); return; }
+  if(!g){ state.error='No existe ninguna partida con ese código.'; render(); return; }
+  if(g.estado!=='inscripcion'){ state.error='Esta partida ya ha empezado y no admite nuevos jugadores.'; render(); return; }
+  state.code = code; state.error=null; state.role='player';
+  startPolling();
+  goToJoin();
+}
+
+async function actionSubmitJoin(){
+  const nombre = document.getElementById('j-nombre').value.trim();
+  const accion = document.getElementById('j-accion').value.trim();
+  const pin = document.getElementById('j-pin').value.trim();
+  if(!nombre || !accion || !/^\d{4}$/.test(pin)){
+    state.error='Rellena nombre, acción, y un PIN de exactamente 4 números.';
+    render(); return;
+  }
+  state.error=null;
+  state.joining=true;
+  render();
+  const jugador = {
+    id: uid(), nombre, foto: state.photoData || null, accion, pin,
+    objetivoId:null, accionAsignada:null, estado:'vivo', numVictimas:0,
+    ordenEliminacion:null, tsPrimeraMuerte:null, esAdmin: !!state._pendingAdminJoin, victimasLog:[],
+    deviceId: getDeviceId()
+  };
+  const result = await saveJoin(state.code, jugador);
+  state.joining=false;
+  if(!result.ok){
+    if(result.error==='no existe la partida') state.error='Esta partida ya no existe. Vuelve atrás y prueba con otro código.';
+    else if(result.error==='partida ya iniciada') state.error='Esta partida ya ha empezado, no admite más jugadores.';
+    else state.error='No se ha podido guardar. Revisa tu conexión e inténtalo de nuevo.';
+    render(); return;
+  }
+  saveProfile({ nombre, foto: state.photoData || null });
+  state._game = result.data;
+  state.myPlayerId = result.jugadorId || jugador.id;
+  state.error=null;
+  saveSession();
+  state.screen='lobby';
+  render();
+  ensurePhotos(result.data);
+  pollTick();
+}
+
+function toggleAccionHint(){
+  const nombreVal = document.getElementById('j-nombre') ? document.getElementById('j-nombre').value : undefined;
+  const accionVal = document.getElementById('j-accion') ? document.getElementById('j-accion').value : undefined;
+  const pinVal = document.getElementById('j-pin') ? document.getElementById('j-pin').value : undefined;
+  state.showAccionHint = !state.showAccionHint;
+  render();
+  const n=document.getElementById('j-nombre'); if(n && nombreVal!==undefined) n.value=nombreVal;
+  const a=document.getElementById('j-accion'); if(a && accionVal!==undefined) a.value=accionVal;
+  const p=document.getElementById('j-pin'); if(p && pinVal!==undefined) p.value=pinVal;
+}
+
+function handlePhotoInput(input){
+  const file = input.files[0];
+  if(!file) return;
+  resizeImage(file).then(data=>{
+    state.photoData = data;
+    const prev = document.getElementById('photo-preview');
+    if(prev) prev.src = data;
+  });
+}
+
+async function actionVerPin(jugadorId, nombre){
+  const result = await callAction('verPin', { code: state.code, jugadorId });
+  if(result.ok) alert(`PIN de ${nombre}: ${result.pin}`);
+  else alert('No se ha podido consultar el PIN.');
+}
+
+async function actionEliminarJugador(jugadorId, nombre){
+  if(!confirm(`¿Eliminar a ${nombre} de la partida? Si tiene un perfil duplicado, elimina el que sobre.`)) return;
+  const result = await callAction('eliminarJugador', { code: state.code, jugadorId });
+  if(result.ok){ state._game = result.data; render(); }
+  else alert('No se ha podido eliminar. Inténtalo de nuevo.');
+}
+
+async function actionStartGame(){
+  const result = await callAction('start', { code: state.code });
+  if(!result.ok){
+    state.error = result.error==='jugadores insuficientes' ? 'Necesitas al menos 4 jugadores.' : 'No se ha podido iniciar. Inténtalo de nuevo.';
+    render(); return;
+  }
+  state.error=null;
+  state._game = result.data;
+  state.lastReassignSeen = result.data.ultimaReasignacion || null;
+  state.screen = state.role==='admin' ? 'admin-panel' : 'game';
+  render();
+  ensurePhotos(result.data);
+}
+
+async function actionConfirmKill(){
+  const pinInput = document.getElementById('kill-pin').value.trim();
+  const result = await callAction('kill', { code: state.code, killerId: state.myPlayerId, pin: pinInput });
+  if(!result.ok){
+    state.modalError = result.error==='pin incorrecto' ? 'PIN incorrecto.' :
+                        result.error==='objetivo no disponible' ? 'Ese objetivo ya no está disponible.' :
+                        'No se ha podido confirmar. Inténtalo de nuevo.';
+    render(); return;
+  }
+  state._game = result.data;
+  state.showKillModal=false; state.modalError=null;
+  sfxKill();
+  if(result.data.estado==='finalizada'){
+    state.screen='ranking';
+    sfxFanfare();
+    if(state.pollTimer) clearInterval(state.pollTimer);
+  } else {
+    state.screen='game';
+  }
+  render();
+  ensurePhotos(result.data);
+}
+
+async function actionReassignAll(){
+  const result = await callAction('reassign', { code: state.code });
+  if(!result.ok){
+    state.error = result.error==='vivos insuficientes' ? 'Necesitas al menos 3 jugadores vivos para reasignar.' : 'No se ha podido reasignar. Inténtalo de nuevo.';
+    render(); return;
+  }
+  state.error=null;
+  state._game = result.data;
+  render();
+}
+
+async function actionSolicitarCambio(){
+  const result = await callAction('solicitarCambio', { code: state.code, jugadorId: state.myPlayerId });
+  if(!result.ok){ alert(result.error==='ya tienes una solicitud pendiente' ? 'Ya has pedido un cambio, espera a que el organizador lo revise.' : 'No se ha podido enviar la solicitud.'); return; }
+  state._game = result.data;
+  render();
+}
+
+async function actionResolverCambio(jugadorId, aprobar){
+  const result = await callAction('resolverCambio', { code: state.code, jugadorId, aprobar });
+  if(result.ok){ state._game = result.data; render(); }
+}
+
+async function actionToggleVisibilidad(){
+  const nuevo = state._game.modoVisibilidadObjetivo==='oculto' ? 'visible' : 'oculto';
+  const result = await callAction('setVisibilidad', { code: state.code, modo: nuevo });
+  if(result.ok){ state._game = result.data; render(); }
+}
+
+async function actionToggleEspectadorMode(){
+  const orden = ['nada','anon','completo'];
+  const actual = orden.indexOf(state._game.modoEspectador);
+  const nuevo = orden[(actual+1) % orden.length];
+  const result = await callAction('setmode', { code: state.code, modo: nuevo });
+  if(result.ok){ state._game = result.data; render(); }
+}
+
+async function actionOpenSpectator(){
+  const code = document.getElementById('spec-code-input').value.trim().toUpperCase();
+  if(!code){ state.error='Introduce el código de la partida.'; render(); return; }
+  const g = await loadGame(code);
+  if(g===undefined){ state.error='No se ha podido conectar. Comprueba tu conexión e inténtalo de nuevo.'; render(); return; }
+  if(!g){ state.error='No existe ninguna partida con ese código.'; render(); return; }
+  state.code=code; state.role='spectator'; state.error=null; state.screen='spectator';
+  state._game = g;
+  saveSession();
+  startPolling(); pollTick();
+  ensurePhotos(g);
+}
+
+async function actionRecoverSubmit(){
+  const code = document.getElementById('rec-code').value.trim().toUpperCase();
+  const nombre = document.getElementById('rec-nombre').value.trim();
+  const pin = document.getElementById('rec-pin').value.trim();
+  if(!code || !nombre || !pin){ state.error='Rellena código, nombre y PIN.'; render(); return; }
+  state.recovering=true; state.error=null; render();
+  const result = await callAction('recover', { code, nombre, pin });
+  state.recovering=false;
+  if(!result.ok){
+    state.error = result.error==='red' ? 'No se ha podido conectar. Comprueba tu conexión e inténtalo de nuevo.'
+      : result.error==='no existe la partida' ? 'No existe ninguna partida con ese código.'
+      : 'No hemos encontrado a nadie con ese nombre y PIN en esa partida.';
+    render(); return;
+  }
+  state.code = code;
+  state.role = result.esAdmin ? 'admin' : 'player';
+  state.myPlayerId = result.esAdmin ? null : result.jugadorId;
+  state._game = result.data;
+  state.lastReassignSeen = result.data.ultimaReasignacion || null;
+  saveSession();
+  const pantalla = await screenForGameState(result.data, state.role, state.myPlayerId);
+  state.screen = pantalla || 'lobby';
+  if(state.screen!=='ranking') startPolling();
+  render();
+  ensurePhotos(result.data);
+}
+
+function revealTarget(){
+  state.showTarget = true;
+  render();
+  if(state._targetTimer) clearTimeout(state._targetTimer);
+  state._targetTimer = setTimeout(()=>{ state.showTarget=false; render(); }, 6000);
+}
+function hideTarget(){
+  if(state._targetTimer) clearTimeout(state._targetTimer);
+  state.showTarget = false;
+  render();
+}
+
+function revealMyPin(){
+  state.showMyPin = true;
+  render();
+  setTimeout(()=>{ state.showMyPin=false; render(); }, 2500);
+}
+
+function goHome(){
+  if(state.pollTimer) clearInterval(state.pollTimer);
+  clearSession();
+  Object.assign(state, {screen:'home', code:null, role:null, myPlayerId:null, error:null, photoData:null, _pendingAdminJoin:false, rankingSlide:0, showMyPin:false, showAccionHint:false, _lastTargetId:null, _deadAnimated:false, ratingSubmitted:false, ratingValue:0, showEmailForm:false, emailSent:false, sendingEmail:false, cfgTipoEvento:undefined, cfgVisibilidad:undefined, showTarget:false, showSolicitudesModal:false, showCodeQr:false});
+  render();
+}
+
+// ---------- render ----------
+function formatElapsed(ms){
+  if(!ms || ms<0) ms=0;
+  const totalMin = Math.floor(ms/60000);
+  const h = Math.floor(totalMin/60);
+  const m = totalMin%60;
+  return (h>0? h+'h ':'') + m+'min';
+}
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function avatarSrc(foto){ return foto || 'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%231d1d22"/></svg>'); }
+function codePillHtml(){
+  return `<div class="code-pill" onclick="state.showCodeQr=true; render();"><span class="txt">Partida: ${esc(state.code)}</span><span class="hint-inline">Toca para ver el QR</span></div>`;
+}
+function codeQrModalHtml(){
+  if(!state.showCodeQr) return '';
+  const url = shareUrlFor(state.code);
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=' + encodeURIComponent(url);
+  return `
+    <div class="modal-bg" onclick="state.showCodeQr=false; render();">
+      <div class="modal center" onclick="event.stopPropagation();">
+        <h3 style="margin-bottom:10px;">Escanea para unirte</h3>
+        <div class="code-box" style="margin-bottom:14px;">${esc(state.code)}</div>
+        <img class="qr" src="${qrUrl}" width="240" height="240" alt="QR de la partida">
+        <button class="btn btn-outline" style="margin-top:14px;" onclick="copyLink('${url}')">Copiar enlace</button>
+        <button class="btn btn-gold" style="margin-top:8px;" onclick="state.showCodeQr=false; render();">Cerrar</button>
+      </div>
+    </div>`;
+}
+
+function render(){
+  document.body.classList.toggle('wide', state.screen==='spectator' || state.screen==='admin-panel' || state.screen==='panel');
+  const renderKey = state.screen + ':' + (state.rankingSlide||0);
+  const cambioDeVista = state._lastRenderKey !== renderKey;
+  state._lastRenderKey = renderKey;
+  const app = document.getElementById('app');
+  let html = '';
+
+  if(state.screen==='home'){
+    html = `
+      <div class="top"><h1>EL ASESINO</h1><p>Un objetivo. Una misión. Un superviviente.</p></div>
+      <div class="card">
+        <p class="hint">Recuerda: consigue que sea tu objetivo quien haga la acción asignada — nunca al revés.</p>
+        <button class="btn btn-gold" onclick="renderCreateConfig()">Crear partida</button>
+        <label>¿Ya tienes un código?</label>
+        <input type="text" id="join-code-input" placeholder="Código de partida" maxlength="5">
+        <button class="btn btn-outline" onclick="actionGoJoinExisting()">Unirme a la partida</button>
+        ${state.error? `<div class="err">${esc(state.error)}</div>`:''}
+      </div>
+      <div class="card">
+        <label>Ver el marcador en directo</label>
+        <input type="text" id="spec-code-input" placeholder="Código de partida" maxlength="5">
+        <button class="btn btn-outline" onclick="actionOpenSpectator()">Abrir modo espectador</button>
+      </div>
+      <div class="footer-nav">
+        <a onclick="state.screen='recover'; state.error=null; render();">¿Perdiste el acceso a tu partida o a tu panel? Recupéralo aquí</a>
+      </div>`;
+  }
+
+  else if(state.screen==='recover'){
+    html = `
+      <div class="top"><h1>RECUPERAR ACCESO</h1></div>
+      <div class="card">
+        <p class="hint">Introduce los mismos datos que pusiste — vale tanto si eras jugador como si eras el organizador.</p>
+        <label>Código de partida</label>
+        <input type="text" id="rec-code" placeholder="Código de partida" maxlength="5">
+        <label>Tu nombre</label>
+        <input type="text" id="rec-nombre" placeholder="El mismo nombre que pusiste">
+        <label>Tu PIN</label>
+        <input type="tel" id="rec-pin" maxlength="4" placeholder="0000">
+        ${state.error? `<div class="err">${esc(state.error)}</div>`:''}
+        <button class="btn btn-gold" ${state.recovering?'disabled':''} onclick="actionRecoverSubmit()">${state.recovering?'Buscando…':'Recuperar'}</button>
+      </div>
+      <div class="footer-nav"><a onclick="goHome()">← Volver</a></div>`;
+  }
+
+  else if(state.screen==='create-config'){
+    const p = state.cfgParticipa;
+    const m = state.cfgModoEspectador;
+    html = `
+      <div class="top"><h1>NUEVA PARTIDA</h1></div>
+      <div class="card">
+        <h2 style="font-size:1.6rem; color:var(--gold); margin-bottom:10px;">¿Vas a jugar tú también?</h2>
+        <div class="row">
+          <button class="btn ${p===true?'btn-gold':'btn-outline'}" style="padding:20px 16px; font-size:1.1rem;" onclick="state.cfgParticipa=true; render();">🗡️ Sí, quiero jugar</button>
+          <button class="btn ${p===false?'btn-gold':'btn-outline'}" style="padding:20px 16px; font-size:1.1rem;" onclick="state.cfgParticipa=false; render();">📋 No, solo organizo</button>
+        </div>
+        <p class="hint">Si juegas, no podrás ver el panel general en directo — jugarás a ciegas como el resto. Como organizador, tú siempre puedes ver todo desde tu panel, elijas lo que elijas abajo.</p>
+      </div>
+      <div class="card">
+        <p style="font-size:0.95rem;">¿Qué pueden ver los <strong>jugadores</strong> en el marcador público (el que se puede proyectar en una pantalla)?</p>
+        <div class="row">
+          <button class="btn ${m==='nada'?'btn-gold':'btn-outline'}" style="font-size:0.85rem;" onclick="state.cfgModoEspectador='nada'; render();">🔒 Nada</button>
+          <button class="btn ${m==='anon'?'btn-gold':'btn-outline'}" style="font-size:0.85rem;" onclick="state.cfgModoEspectador='anon'; render();">🔢 Solo un contador</button>
+          <button class="btn ${m==='completo'?'btn-gold':'btn-outline'}" style="font-size:0.85rem;" onclick="state.cfgModoEspectador='completo'; render();">🖼️ Caras y nombres</button>
+        </div>
+        <p class="hint">
+          <strong>Nada:</strong> el marcador público queda desactivado, nadie ve nada fuera de su propio móvil.<br>
+          <strong>Solo un contador:</strong> se ve cuántos quedan vivos ("3 de 12"), sin decir quiénes.<br>
+          <strong>Caras y nombres:</strong> se ve quién sigue vivo y quién ha caído, pero nunca quién persigue a quién.
+        </p>
+        <p class="hint">Esto es independiente de ti como organizador: puedes cambiarlo en cualquier momento desde tu panel.</p>
+      </div>
+      <div class="card">
+        <p style="font-size:0.95rem;">¿Cómo se muestra el objetivo en la pantalla de cada jugador?</p>
+        <div class="row">
+          <button class="btn ${state.cfgVisibilidad==='visible'?'btn-gold':'btn-outline'}" onclick="state.cfgVisibilidad='visible'; render();">Siempre visible</button>
+          <button class="btn ${state.cfgVisibilidad==='oculto'?'btn-gold':'btn-outline'}" onclick="state.cfgVisibilidad='oculto'; render();">Oculto (privacidad)</button>
+        </div>
+        <p class="hint">
+          <strong>Siempre visible:</strong> la foto y la misión se ven en todo momento en pantalla.<br>
+          <strong>Oculto:</strong> la pantalla no muestra nada por defecto; cada jugador pulsa un botón para verlo unos segundos y se oculta solo — ideal para que nadie a tu lado pueda verlo de reojo.
+        </p>
+      </div>
+      <div class="card">
+        <p style="font-size:0.95rem;">¿Quieres añadir acciones propias de este evento? <span style="color:var(--text-dim); font-weight:400;">(opcional)</span></p>
+        <textarea id="cfg-acciones" placeholder="Una por línea. Ej:&#10;Que te cuente su destino favorito&#10;Que te haga una foto en la piscina&#10;Que brinde contigo" oninput="state.cfgAcciones=this.value">${esc(state.cfgAcciones||'')}</textarea>
+        <p class="hint">Se usan cuando un jugador pide cambiar su misión y tú lo apruebas. Si lo dejas vacío, el cambio sale de las acciones que propusieron los jugadores.</p>
+      </div>
+      <div class="card">
+        <p style="font-size:0.9rem;">¿Qué tipo de evento es? <span style="color:var(--text-dim); font-weight:400;">(opcional)</span></p>
+        <div class="row">
+          <button class="btn ${state.cfgTipoEvento==='fiesta'?'btn-gold':'btn-outline'}" style="font-size:0.82rem;" onclick="state.cfgTipoEvento='fiesta'; render();">Fiesta</button>
+          <button class="btn ${state.cfgTipoEvento==='empresa'?'btn-gold':'btn-outline'}" style="font-size:0.82rem;" onclick="state.cfgTipoEvento='empresa'; render();">Empresa</button>
+          <button class="btn ${state.cfgTipoEvento==='despedida'?'btn-gold':'btn-outline'}" style="font-size:0.82rem;" onclick="state.cfgTipoEvento='despedida'; render();">Despedida</button>
+        </div>
+      </div>
+      ${p===false? `
+      <div class="card">
+        <p style="font-size:0.95rem;">Tu acceso como organizador</p>
+        <p class="hint">Si sales sin querer de la app, esto es lo que necesitarás para volver a tu panel — igual que hacen los jugadores con su nombre y PIN.</p>
+        <label>Tu nombre</label>
+        <input type="text" id="cfg-admin-nombre" placeholder="Tu nombre (solo para recuperar el panel)">
+        <label>Tu PIN (4 números)</label>
+        <input type="tel" id="cfg-admin-pin" maxlength="4" placeholder="0000">
+      </div>` : ''}
+      <div class="card center">
+        <button class="btn btn-gold" ${(p===undefined||!m||!state.cfgVisibilidad)?'disabled':''} onclick="actionCreateGame(state.cfgParticipa, state.cfgModoEspectador, state.cfgTipoEvento, state.cfgVisibilidad)">Crear partida</button>
+      </div>
+      <div class="footer-nav"><a onclick="goHome()">← Volver</a></div>`;
+  }
+
+  else if(state.screen==='created'){
+    const url = shareUrlFor(state.code);
+    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(url);
+    const waUrl = 'https://wa.me/?text=' + encodeURIComponent('Únete a la partida de El Asesino: ' + url);
+    html = `
+      <div class="top"><h1>PARTIDA CREADA</h1></div>
+      <div class="card center">
+        <div class="code-box">${state.code}</div>
+        <img class="qr" src="${qrUrl}" width="220" height="220" alt="QR de la partida">
+        <p class="small-link">${esc(url)}</p>
+        <p class="hint">Comparte el código, el QR o el enlace para que se unan desde su móvil.</p>
+        <div class="row">
+          <button class="btn btn-outline" onclick="copyLink('${url}')">Copiar enlace</button>
+          <a class="btn btn-outline" href="${waUrl}" target="_blank" rel="noopener">WhatsApp</a>
+        </div>
+        ${state.adminParticipaFlag ? '' : `<p class="hint">Si sales sin querer del panel, podrás volver con tu nombre y PIN desde "¿Perdiste el acceso...? Recupéralo aquí" en la pantalla de inicio.</p>`}
+        <button class="btn btn-gold" onclick="${state.adminParticipaFlag ? 'goToJoin()' : "state.screen='lobby'; render();"}">${state.adminParticipaFlag? 'Continuar y crear tu perfil' : 'Ir a la sala de espera'}</button>
+      </div>
+      <div class="footer-nav"><a onclick="goHome()">← Cancelar</a></div>`;
+  }
+
+  else if(state.screen==='tutorial'){
+    const step = state.tutorialStep||0;
+    const pasos = [
+      { titulo:'¿CÓMO FUNCIONA?', texto:'Vas a recibir un objetivo: otra persona de la partida. Tu misión es conseguir que ESA PERSONA haga, sin sospechar, una acción secreta que tú le asignarás.' },
+      { titulo:'CUANDO LO CONSIGUES', texto:'En cuanto tu objetivo hace la acción, queda eliminado. Heredas automáticamente a quién estaba cazando él y con qué acción — y sigues cazando. Al final solo queda un superviviente.' },
+      { titulo:'ELIGE BIEN TU ACCIÓN', texto:'Tu acción no volverá necesariamente a ti — se reparte al azar entre todos, y puede tocarle a cualquiera para usarla sobre cualquier objetivo. Por eso cuanto más realista y fácil de pedir sin levantar sospechas sea, más divertida será para todo el grupo.' }
+    ];
+    const p = pasos[step];
+    html = `
+      <div class="top"><h1>ANTES DE EMPEZAR</h1></div>
+      <div class="card center slide-enter">
+        <h2 style="color:var(--gold); font-size:1.6rem; margin-bottom:10px;">${p.titulo}</h2>
+        <p class="hint" style="font-size:1rem; line-height:1.5;">${p.texto}</p>
+      </div>
+      <div class="step-indicator">Paso ${step+1} de 3</div>
+      <div class="slide-nav">
+        ${step>0? `<button class="btn btn-outline" onclick="tutorialNav(-1)">← Anterior</button>`:''}
+        ${step<2? `<button class="btn btn-gold" onclick="tutorialNav(1)">Siguiente →</button>` : `<button class="btn btn-gold" onclick="finishTutorial()">Entendido, ¡vamos!</button>`}
+      </div>
+      <div class="footer-nav"><a onclick="goHome()">← Cancelar</a></div>`;
+  }
+
+  else if(state.screen==='join'){
+    const profile = loadProfile();
+    html = `
+      <div class="top"><h1>ÚNETE</h1><p>Partida ${esc(state.code)} · <a onclick="state.tutorialStep=0; state.screen='tutorial'; render();" style="color:var(--gold); cursor:pointer; text-decoration:underline;">¿Cómo se juega?</a></p></div>
+      <div class="card">
+        <div class="avatar-wrap"><img id="photo-preview" class="avatar" src="${avatarSrc(state.photoData)}"></div>
+        <label>Tu rostro para la arena</label>
+        <input type="file" id="file-camera" accept="image/*" capture="user" style="display:none" onchange="handlePhotoInput(this)">
+        <input type="file" id="file-gallery" accept="image/*" style="display:none" onchange="handlePhotoInput(this)">
+        <div class="row">
+          <button type="button" class="btn photo-btn" onclick="document.getElementById('file-camera').click()">📸 Hacer foto</button>
+          <button type="button" class="btn photo-btn" onclick="document.getElementById('file-gallery').click()">🖼️ Desde galería</button>
+        </div>
+        <p class="hint">Si has abierto este enlace desde WhatsApp y la cámara no responde, pulsa los tres puntos de arriba y elige "Abrir en el navegador", o usa "Desde galería".</p>
+        <label>Tu nombre</label>
+        <input type="text" id="j-nombre" value="${esc(profile.nombre||'')}" placeholder="Nombre visible para los demás">
+        <label>Propón una acción para matar <span class="info-icon" onclick="toggleAccionHint()">ⓘ</span></label>
+        ${state.showAccionHint? `<p class="hint">Ideas: que te dé un masaje, que brinde contigo, que te haga una foto juntos, que te cuente un secreto... Cuanto más fácil de pedir sin levantar sospechas y más divertida, ¡mejor será el juego!</p>` : ''}
+        <input type="text" id="j-accion" placeholder="Ej: que te dé un masaje">
+        <label>Tu PIN secreto (4 números)</label>
+        <input type="tel" id="j-pin" maxlength="4" placeholder="0000">
+        <p class="hint">Dale este PIN solo a quien consiga matarte, en el momento en que lo logre.</p>
+        ${state.error? `<div class="err">${esc(state.error)}</div>`:''}
+        ${state.joining? `<p class="hint center" style="color:var(--gold);">Guardando tu perfil, puede tardar unos segundos con mala cobertura — no vuelvas a pulsar.</p>` : ''}
+        <button class="btn btn-gold" ${state.joining?'disabled':''} onclick="actionSubmitJoin()">${state.joining?'Guardando…':'Entrar en la partida'}</button>
+      </div>
+      <div class="footer-nav"><a onclick="goHome()">← Probar con otro código</a></div>`;
+  }
+
+  else if(state.screen==='lobby'){
+    const g = state._game;
+    const jugadores = g ? g.jugadores : [];
+    const misDatos = jugadores.find(j=>j.id===state.myPlayerId);
+    const puedeIniciar = state.role==='admin' || (misDatos && misDatos.esAdmin);
+    html = `
+      ${codePillHtml()}
+      <div class="top"><h1>SALA DE ESPERA</h1><p>Partida ${esc(state.code)} · ${jugadores.length} unidos</p></div>
+      <div class="card">
+        <div class="lobby-grid">
+          ${jugadores.map(j=>`
+            <div class="lobby-item">
+              <img src="${avatarSrc(photoOf(j.id))}">
+              <div class="lname">${esc(j.nombre)}</div>
+              ${puedeIniciar? `<a onclick="actionEliminarJugador('${j.id}','${esc(j.nombre)}')" style="color:var(--blood); font-size:0.68rem; cursor:pointer; text-decoration:underline;">Eliminar</a>` : ''}
+            </div>`).join('')}
+        </div>
+        ${jugadores.length===0? '<p class="hint center">Aún no se ha unido nadie.</p>':''}
+      </div>
+      ${puedeIniciar? `
+        <div class="card">
+          <div class="row">
+            <button class="btn btn-outline" onclick="copyLink('${shareUrlFor(state.code)}')">Copiar enlace</button>
+            <a class="btn btn-outline" href="https://wa.me/?text=${encodeURIComponent('Únete a la partida de El Asesino: '+shareUrlFor(state.code))}" target="_blank" rel="noopener">WhatsApp</a>
+          </div>
+          <button class="btn btn-gold" ${jugadores.length<4?'disabled':''} onclick="actionStartGame()">Iniciar partida</button>
+          <p class="hint">Se necesitan al menos 4 jugadores.</p>
+          ${state.error? `<div class="err">${esc(state.error)}</div>`:''}
+        </div>` : `<p class="hint center">Esperando a que el organizador inicie la partida…</p>`}
+      <div class="footer-nav"><a onclick="goHome()">Salir</a></div>`;
+  }
+
+  else if(state.screen==='game'){
+    const g = state._game;
+    const me = g.jugadores.find(j=>j.id===state.myPlayerId);
+    const target = me ? g.jugadores.find(j=>j.id===me.objetivoId) : null;
+    if(!me || !target){
+      html = `<div class="top"><h1>UN MOMENTO…</h1></div><div class="card center"><p class="hint">Actualizando tu misión…</p></div>`;
+    } else {
+    const vivos = g.jugadores.filter(j=>j.estado==='vivo').length;
+    const esObjetivoNuevo = state._lastTargetId !== target.id;
+    state._lastTargetId = target.id;
+    const modoOculto = g.modoVisibilidadObjetivo==='oculto';
+    if(esObjetivoNuevo) state.showTarget = false;
+    const mostrarAhora = !modoOculto || state.showTarget;
+    const solicitudPendiente = (g.solicitudesCambio||[]).some(s=>s.jugadorId===me.id && s.estado==='pendiente');
+    html = `
+      ${codePillHtml()}
+      <div class="top"><h1>TU MISIÓN</h1><p class="tag">Quedan ${vivos} en juego</p></div>
+      <div class="card">
+        ${mostrarAhora ? `
+          <div class="mission-photo ${esObjetivoNuevo?'reveal':''}"><img src="${avatarSrc(photoOf(target.id))}"></div>
+          <div class="name">${esc(target.nombre)}</div>
+        ` : `
+          <div class="mission-photo placeholder-oculto"><span>?</span></div>
+          <div class="name" style="color:var(--text-dim); letter-spacing:0.06em; font-size:1.1rem;">OBJETIVO OCULTO</div>
+        `}
+        ${modoOculto? `
+          <div class="center" style="margin:8px 0 4px;">
+            ${mostrarAhora
+              ? `<button class="btn btn-outline" onclick="hideTarget()">Ocultar ahora</button>`
+              : `<button class="btn btn-gold" onclick="revealTarget()">Ver mi objetivo</button>`}
+          </div>` : ''}
+        <p class="tag" style="margin-top:14px;">Consigue que tu objetivo:</p>
+        <div class="mission-box">${esc(me.accionAsignada)}</div>
+        <button class="btn btn-blood" onclick="state.showKillModal=true; state.modalError=null; render();">He completado mi misión</button>
+        <p class="hint" style="text-align:center; margin-top:10px;">
+          ${solicitudPendiente
+            ? 'Solicitud enviada — esperando que el organizador la revise.'
+            : `¿Misión imposible? <a onclick="actionSolicitarCambio()" style="color:var(--gold); cursor:pointer; text-decoration:underline;">Pedir un cambio</a>`}
+        </p>
+      </div>
+      <div class="card center">
+        <p class="hint clickable-hint" onclick="state.showVictimList=!state.showVictimList; render();">Víctimas conseguidas: ${me.numVictimas} ${me.numVictimas>0?(state.showVictimList?'▲':'▼'):''}</p>
+        ${state.showVictimList && me.victimasLog && me.victimasLog.length ? `
+          <div style="margin-top:8px; text-align:left;">
+            ${me.victimasLog.map((v,i)=>`
+              <div class="ranking-row">
+                <img src="${avatarSrc(photoOf(v.id))}">
+                <div class="rn">${i+1}. ${esc(v.nombre)}</div>
+                <div class="rv">${formatElapsed((v.ts||0)-(g.iniciadoEn||0))}</div>
+              </div>`).join('')}
+          </div>` : ''}
+        ${state.showMyPin? `<div class="code-box" style="font-size:1.8rem; margin-top:12px;">${esc(me.pin)}</div>` : `<button class="btn btn-outline" onclick="revealMyPin()">¿Olvidaste tu PIN?</button>`}
+      </div>
+      <div class="footer-nav">
+        ${me.esAdmin ? `<a onclick="state.showSolicitudesModal=true; render();">Solicitudes de cambio${(g.solicitudesCambio||[]).filter(s=>s.estado==='pendiente').length? ' ('+(g.solicitudesCambio||[]).filter(s=>s.estado==='pendiente').length+')':''}</a> · ` : ''}
+        <a onclick="goHome()">Salir</a>
+      </div>
+    `;
+    if(state.showSolicitudesModal){
+      const pendientes = (g.solicitudesCambio||[]).filter(s=>s.estado==='pendiente');
+      html += `
+        <div class="modal-bg">
+          <div class="modal">
+            <h3 style="margin-bottom:10px;">Solicitudes de cambio de misión</h3>
+            ${pendientes.length===0? `<p class="hint">No hay solicitudes pendientes.</p>` : pendientes.map(s=>`
+              <div class="ranking-row">
+                <div class="rn">${esc(s.nombre)}</div>
+                <button class="btn btn-gold" style="flex:none; width:auto; padding:8px 14px;" onclick="actionResolverCambio('${s.jugadorId}', true)">Aprobar</button>
+                <button class="btn btn-outline" style="flex:none; width:auto; padding:8px 14px;" onclick="actionResolverCambio('${s.jugadorId}', false)">Rechazar</button>
+              </div>
+            `).join('')}
+            <button class="btn btn-outline" style="margin-top:14px;" onclick="state.showSolicitudesModal=false; render();">Cerrar</button>
+          </div>
+        </div>`;
+    }
+    if(state.showKillModal){
+      html += `
+        <div class="modal-bg">
+          <div class="modal">
+            <h3 style="margin-bottom:10px;">Confirmar eliminación</h3>
+            <p class="hint">Pide a ${mostrarAhora ? esc(target.nombre) : 'tu objetivo'} su PIN de 4 dígitos.</p>
+            <input type="tel" id="kill-pin" maxlength="4" placeholder="0000">
+            ${state.modalError? `<div class="err">${esc(state.modalError)}</div>`:''}
+            <button class="btn btn-gold" onclick="actionConfirmKill()">Confirmar</button>
+            <button class="btn btn-outline" onclick="state.showKillModal=false; render();">Cancelar</button>
+          </div>
+        </div>`;
+    }
+    if(state.showReassignModal){
+      html += `
+        <div class="modal-bg">
+          <div class="modal center">
+            <h3 style="margin-bottom:10px;">⚠️ EL JUEGO HA DADO UN VUELCO</h3>
+            <p class="hint" style="font-size:0.95rem;">¿Pensabas que ya lo tenías controlado?</p>
+            <p class="hint" style="font-size:0.95rem;">Todas las misiones han cambiado. Olvida lo que sabías — nadie es ya quien creías que era.</p>
+            <button class="btn btn-gold" onclick="state.showReassignModal=false; render();">Ver mi nuevo objetivo →</button>
+          </div>
+        </div>`;
+    }
+    }
+  }
+
+  else if(state.screen==='dead'){
+    const g = state._game;
+    const me = g.jugadores.find(j=>j.id===state.myPlayerId);
+    const vivos = g.jugadores.filter(j=>j.estado==='vivo').length;
+    const primeraVez = !state._deadAnimated;
+    state._deadAnimated = true;
+    html = `
+      ${codePillHtml()}
+      <div class="top"><h1>HAS CAÍDO</h1></div>
+      <div class="card center">
+        <div class="avatar-wrap dead"><img class="avatar dead kite ${primeraVez?'reveal-dead':''}" src="${avatarSrc(photoOf(me.id))}"><div class="skull">💀</div></div>
+        <div class="name dead">${esc(me.nombre)}</div>
+        <p class="hint">Quedan ${vivos} jugadores en la arena.</p>
+        <p class="hint">Solo los caídos conocéis este secreto — ni una pista a quien sigue vivo, o le quitaréis toda la gracia al juego.</p>
+        <button class="btn btn-outline" onclick="actionOpenSpectatorFromInside()">Ver marcador</button>
+      </div>
+      <div class="footer-nav"><a onclick="goHome()">Salir</a></div>`;
+  }
+
+  else if(state.screen==='admin-panel'){
+    const g = state._game;
+    const vivos = g.jugadores.filter(j=>j.estado==='vivo');
+    const muertos = g.jugadores.filter(j=>j.estado==='muerto');
+    html = `
+      ${codePillHtml()}
+      <div class="top"><h1>PANEL DEL ORGANIZADOR</h1><p>Partida ${esc(state.code)} · ${vivos.length} vivos / ${g.jugadores.length}</p></div>
+      <div class="card">
+        <button class="btn btn-gold" onclick="actionReassignAll()">Reasignar todos los objetivos</button>
+        <p class="hint">Reparte de nuevo objetivo y acción solo entre los jugadores vivos, y avisa a todos con un mensaje épico.</p>
+        ${state.error? `<div class="err">${esc(state.error)}</div>`:''}
+      </div>
+      <div class="card">
+        <p class="hint">Marcador público para jugadores/proyector: <strong>${g.modoEspectador==='completo'?'Caras y nombres':g.modoEspectador==='nada'?'Desactivado':'Solo el contador'}</strong></p>
+        <button class="btn btn-outline" onclick="actionToggleEspectadorMode()">Cambiar modo</button>
+        <div class="row">
+          <button class="btn btn-outline" onclick="copyLink('${shareSpectatorUrlFor(state.code)}')">Copiar enlace del marcador</button>
+        </div>
+        <p class="hint">Ese enlace puedes abrirlo en un ordenador o proyectarlo en una pantalla para que todos vean cómo va la partida en directo.</p>
+      </div>
+      <div class="card">
+        <p class="hint">Visibilidad del objetivo en el móvil de cada jugador: <strong>${g.modoVisibilidadObjetivo==='oculto'?'Oculto (privacidad)':'Siempre visible'}</strong></p>
+        <button class="btn btn-outline" onclick="actionToggleVisibilidad()">Cambiar a ${g.modoVisibilidadObjetivo==='oculto'?'siempre visible':'oculto'}</button>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:10px;">Solicitudes de cambio de misión</h3>
+        <p class="hint" style="margin-bottom:10px;">${(g.accionesOrganizador||[]).length
+          ? 'Si apruebas, la nueva acción saldrá de tu lista del evento ('+(g.accionesOrganizador||[]).length+' acciones).'
+          : 'Si apruebas, la nueva acción saldrá de las que propusieron los jugadores.'}</p>
+        ${(function(){
+          const pendientes = (g.solicitudesCambio||[]).filter(s=>s.estado==='pendiente');
+          if(pendientes.length===0) return `<p class="hint">No hay solicitudes pendientes.</p>`;
+          return pendientes.map(s=>`
+            <div class="ranking-row">
+              <div class="rn">${esc(s.nombre)}</div>
+              <button class="btn btn-gold" style="flex:none; width:auto; padding:8px 14px;" onclick="actionResolverCambio('${s.jugadorId}', true)">Aprobar</button>
+              <button class="btn btn-outline" style="flex:none; width:auto; padding:8px 14px;" onclick="actionResolverCambio('${s.jugadorId}', false)">Rechazar</button>
+            </div>`).join('');
+        })()}
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:10px;">Jugadores</h3>
+        <div class="spectator-grid">
+          ${g.jugadores.map(j=>`
+            <div class="spec-item ${j.estado==='muerto'?'dead':''}">
+              <img src="${avatarSrc(photoOf(j.id))}">
+              <div class="sname">${esc(j.nombre)}${j.esAdmin?' 👑':''}</div>
+              <div class="hint">${j.numVictimas} víctimas</div>
+              <a onclick="actionVerPin('${j.id}','${esc(j.nombre)}')" style="color:var(--gold); font-size:0.68rem; cursor:pointer; text-decoration:underline;">Ver PIN</a>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="footer-nav"><a onclick="goHome()">Salir</a></div>`;
+  }
+
+  else if(state.screen==='spectator'){
+    const g = state._game;
+    const vivos = g.jugadores.filter(j=>j.estado==='vivo').length;
+    if(g.modoEspectador==='nada'){
+      html = `
+        <div class="top"><h1>MARCADOR EN VIVO</h1><p>Partida ${esc(state.code)}</p></div>
+        <div class="card center">
+          <p class="hint">El organizador ha desactivado el marcador público para esta partida.</p>
+        </div>
+        <div class="footer-nav"><a onclick="goHome()">Salir</a></div>`;
+    } else {
+    const permiteCompleto = g.modoEspectador==='completo';
+    if(!permiteCompleto) state.spectatorMode='anon';
+    html = `
+      <div class="top"><h1>MARCADOR EN VIVO</h1><p>Partida ${esc(state.code)}</p></div>
+      <div class="toggle-row">
+        <button class="btn ${state.spectatorMode==='anon'?'active':''}" onclick="state.spectatorMode='anon'; render();">Anonimizado</button>
+        <button class="btn ${state.spectatorMode==='full'?'active':''}" ${permiteCompleto?'':'disabled'} onclick="trySetSpectatorFull()">Completo</button>
+      </div>
+      ${!permiteCompleto? '<p class="hint center">El organizador ha desactivado la vista con caras y nombres.</p>' : ''}
+      ${state.spectatorMode==='anon' ? `
+        <div class="counter">
+          <div class="big">${vivos} / ${g.jugadores.length}</div>
+          <div class="sub">supervivientes en juego</div>
+        </div>` : `
+        <div class="spectator-grid">
+          ${g.jugadores.map(j=>`
+            <div class="spec-item ${j.estado==='muerto'?'dead':''}">
+              <img src="${avatarSrc(photoOf(j.id))}">
+              <div class="sname">${esc(j.nombre)}</div>
+            </div>`).join('')}
+        </div>`}
+      <div class="footer-nav"><a onclick="goHome()">Salir</a></div>`;
+    }
+  }
+
+  else if(state.screen==='panel'){
+    const s = state._stats;
+    if(!s){
+      html = `<div class="top"><h1>ANALÍTICA</h1></div><div class="card center"><p class="hint">Cargando estadísticas…</p></div>`;
+    } else {
+      const tipos = Object.keys(s.tiposEvento||{});
+      html = `
+        <div class="top"><h1>ANALÍTICA</h1><p>Datos agregados de todas las partidas</p></div>
+        <div class="stat-grid">
+          <div class="stat-card"><div class="num">${s.totalPartidas}</div><div class="lbl">Partidas creadas</div></div>
+          <div class="stat-card"><div class="num">${s.totalJugadores}</div><div class="lbl">Jugadores totales</div></div>
+          <div class="stat-card"><div class="num">${s.mediaJugadoresPorPartida}</div><div class="lbl">Jugadores de media (por partida)</div></div>
+          <div class="stat-card"><div class="num">${s.mediaJugadoresPorPartidaCompletada}</div><div class="lbl">Jugadores de media (partidas completadas)</div></div>
+          <div class="stat-card"><div class="num">${s.partidasCompletadas}</div><div class="lbl">Partidas completadas</div></div>
+          <div class="stat-card"><div class="num">${s.partidasEnCurso}</div><div class="lbl">En curso ahora</div></div>
+          <div class="stat-card"><div class="num">${s.partidasSinIniciar}</div><div class="lbl">Creadas sin iniciar</div></div>
+          <div class="stat-card"><div class="num">${s.duracionMediaMinutos}</div><div class="lbl">Minutos de duración media</div></div>
+          <div class="stat-card"><div class="num">${s.totalAperturasInscripcion}</div><div class="lbl">Aperturas del formulario</div></div>
+          <div class="stat-card"><div class="num">${s.organizadoresUnicos}</div><div class="lbl">Organizadores únicos</div></div>
+          <div class="stat-card"><div class="num">${s.organizadoresRecurrentes}</div><div class="lbl">Organizadores recurrentes</div></div>
+          <div class="stat-card"><div class="num">${s.valoracionMedia||'—'}</div><div class="lbl">Valoración media (${s.totalValoraciones})</div></div>
+          <div class="stat-card"><div class="num">${s.totalContactosEmail}</div><div class="lbl">Emails recogidos</div></div>
+        </div>
+        ${tipos.length? `
+        <div class="card" style="margin-top:14px;">
+          <h3 style="margin-bottom:8px;">Tipos de evento</h3>
+          ${tipos.map(t=>`<div class="ranking-row"><div class="rn">${esc(t)}</div><div class="rv">${s.tiposEvento[t]}</div></div>`).join('')}
+        </div>` : ''}
+        <div class="footer-nav"><a onclick="loadPanelStats().then(render)">Actualizar</a></div>`;
+    }
+  }
+
+  else if(state.screen==='ranking'){
+    const g = state._game;
+    const superviviente = g.jugadores.find(j=>j.estado==='vivo');
+    const conKills = g.jugadores.filter(j=>j.numVictimas>0);
+    const veloz = conKills.length ? conKills.slice().sort((a,b)=>a.tsPrimeraMuerte-b.tsPrimeraMuerte)[0] : null;
+    const maxVictimas = conKills.length ? Math.max(...conKills.map(j=>j.numVictimas)) : 0;
+    const empatadosSerie = maxVictimas>0 ? conKills.filter(j=>j.numVictimas===maxVictimas) : [];
+    let serie = null, serieDuo = null;
+    if(empatadosSerie.length===1){ serie = empatadosSerie[0]; }
+    else if(empatadosSerie.length===2){ serieDuo = empatadosSerie; }
+    else if(empatadosSerie.length>=3){
+      serie = empatadosSerie.slice().sort((a,b)=>{
+        const ta = (a.victimasLog && a.victimasLog[maxVictimas-1]) ? a.victimasLog[maxVictimas-1].ts : Infinity;
+        const tb = (b.victimasLog && b.victimasLog[maxVictimas-1]) ? b.victimasLog[maxVictimas-1].ts : Infinity;
+        return ta - tb;
+      })[0];
+    }
+    const serieIds = serie ? [serie.id] : (serieDuo ? serieDuo.map(j=>j.id) : []);
+    const eliminados = g.jugadores.filter(j=>j.estado==='muerto').sort((a,b)=>(b.ordenEliminacion||0)-(a.ordenEliminacion||0));
+    const tabla = superviviente ? [superviviente, ...eliminados] : eliminados;
+    function tagsFor(j){
+      const t=[];
+      if(superviviente && j.id===superviviente.id) t.push('Superviviente');
+      if(veloz && j.id===veloz.id) t.push('Más veloz');
+      if(serieIds.indexOf(j.id)!==-1) t.push('Asesino en serie');
+      return t;
+    }
+    function orbitStyle(i, total){
+      const perRing = 9;
+      const ring = Math.floor(i / perRing);
+      const idxInRing = i % perRing;
+      const countInRing = Math.min(perRing, total - ring*perRing);
+      const angle = (idxInRing / countInRing) * 2*Math.PI + ring*0.4;
+      const radius = 30 + ring*14;
+      const left = 50 + radius*Math.cos(angle) - 7;
+      const top = 50 + radius*Math.sin(angle) - 7;
+      const rot = ((i*37)%40)-20;
+      return `top:${top}%; left:${left}%; transform:rotate(${rot}deg);`;
+    }
+    const slide = state.rankingSlide || 0;
+
+    if(slide===0 && superviviente){
+      const confetti = Array.from({length:18}).map((_,i)=>{
+        const left = Math.round(Math.random()*100);
+        const delay = (Math.random()*0.6).toFixed(2);
+        const colors = ['#BE8F4E','#8c1f28','#F2F1ED','#8a6a3b'];
+        const color = colors[i%colors.length];
+        return `<div class="confetti-piece" style="left:${left}%; background:${color}; animation-delay:${delay}s;"></div>`;
+      }).join('');
+      const bgThumbs = eliminados.map((j,i)=>`<img class="bg-thumb" src="${avatarSrc(photoOf(j.id))}" style="${orbitStyle(i, eliminados.length)}">`).join('');
+      html = `
+        <div class="top"><h1>ÚLTIMO SUPERVIVIENTE</h1></div>
+        <div class="confetti-wrap">${confetti}</div>
+        <div class="card center slide-enter">
+          <div class="winner-stage">
+            <div class="winner-bg">${bgThumbs}</div>
+            <div class="winner-photo"><img src="${avatarSrc(photoOf(superviviente.id))}"></div>
+          </div>
+          <div class="final-label">Ha sobrevivido a los demás</div>
+          <div class="final-name">${esc(superviviente.nombre)}</div>
+          <p class="epic-copy hint">Todos los que ves alrededor cayeron por el camino.</p>
+          <p class="epic-copy hint">Solo queda en pie quien tuvo más cabeza — o más suerte.</p>
+        </div>
+        <div class="step-indicator">Paso 1 de 4</div>
+        <div class="slide-nav"><button class="btn btn-gold" onclick="rankingNav(1)">Siguiente →</button></div>
+        <div class="footer-nav"><a onclick="goHome()">Salir</a></div>`;
+    } else if(slide===1 && veloz){
+      const minutos = formatElapsed((veloz.tsPrimeraMuerte||0) - (g.iniciadoEn||0));
+      html = `
+        <div class="top"><h1>ASESINO MÁS VELOZ</h1></div>
+        <div class="card center slide-enter">
+          <div class="avatar-wrap epic"><img class="avatar" src="${avatarSrc(photoOf(veloz.id))}"></div>
+          <div class="final-name" style="font-size:2.1rem;">${esc(veloz.nombre)}</div>
+          <div class="final-label" style="margin-top:8px;">Tiempo hasta su primera víctima</div>
+          <div class="time-highlight">${minutos}</div>
+          <p class="epic-copy hint">Nadie más tuvo tiempo de reaccionar.</p>
+        </div>
+        <div class="step-indicator">Paso 2 de 4</div>
+        <div class="slide-nav">
+          <button class="btn btn-outline" onclick="rankingNav(-1)">← Anterior</button>
+          <button class="btn btn-gold" onclick="rankingNav(1)">Siguiente →</button>
+        </div>
+        <div class="footer-nav"><a onclick="goHome()">Salir</a></div>`;
+    } else if(slide===2 && (serie || serieDuo)){
+      const protagonistas = serie ? [serie] : serieDuo;
+      const esDuo = !!serieDuo;
+      const victimThumbs = protagonistas.map(j=>(j.victimasLog||[]).map(v=>`<img class="victim-thumb" src="${avatarSrc(photoOf(v.id))}">`).join('')).join('');
+      html = `
+        <div class="top"><h1>${esDuo?'ASESINOS EN SERIE':'ASESINO EN SERIE'}</h1></div>
+        <div class="card center slide-enter">
+          <div class="row" style="justify-content:center; gap:18px;">
+            ${protagonistas.map(j=>`
+              <div>
+                <div class="avatar-wrap epic" style="width:${esDuo?'120px':'210px'};"><img class="avatar" src="${avatarSrc(photoOf(j.id))}"></div>
+                <div class="final-name" style="font-size:${esDuo?'1.3rem':'2.1rem'};">${esc(j.nombre)}</div>
+              </div>`).join('')}
+          </div>
+          <p class="epic-copy hint" style="margin-top:14px;">${esDuo? 'A este dúo le gusta demasiado la sangre.' : `<strong style="color:var(--gold);">${serie.numVictimas} víctimas</strong> a su nombre.`}</p>
+          <p class="epic-copy hint">Nadie a su alrededor estaba realmente a salvo.</p>
+          <div class="victims-grid">${victimThumbs}</div>
+        </div>
+        <div class="step-indicator">Paso 3 de 4</div>
+        <div class="slide-nav">
+          <button class="btn btn-outline" onclick="rankingNav(-1)">← Anterior</button>
+          <button class="btn btn-gold" onclick="rankingNav(1)">Siguiente →</button>
+        </div>
+        <div class="footer-nav"><a onclick="goHome()">Salir</a></div>`;
+    } else {
+      const nombreValorador = (function(){
+        if(state.role==='player'){ const me=g.jugadores.find(j=>j.id===state.myPlayerId); return me? me.nombre : 'Jugador'; }
+        if(state.role==='spectator') return 'Espectador';
+        return 'Organizador';
+      })();
+      let resumenTexto = '🎭 ¡LA PARTIDA HA TERMINADO! 🎭\n\nEstos son los resultados de nuestra partida a El Asesino:\n\n';
+      if(superviviente) resumenTexto += `🏆 Superviviente: ${superviviente.nombre}\n`;
+      if(veloz) resumenTexto += `⚡ Asesino más rápido: ${veloz.nombre}\n`;
+      if(serie) resumenTexto += `🔪 Asesino en serie: ${serie.nombre} (${serie.numVictimas} víctimas)\n`;
+      else if(serieDuo) resumenTexto += `🔪 Asesinos en serie: ${serieDuo.map(j=>j.nombre).join(' y ')}\n`;
+      resumenTexto += '\n📋 Clasificación completa:\n';
+      tabla.forEach((j,i)=>{ resumenTexto += `${i+1}. ${j.nombre} - ${j.numVictimas} víctimas\n`; });
+      resumenTexto += '\n¿Os apuntáis a la revancha? 😏\nCrea tu propia partida gratis en: https://www.gotelin.com/juegos';
+      state._lastResumenTexto = resumenTexto;
+      const waResumenUrl = 'https://wa.me/?text=' + encodeURIComponent(resumenTexto);
+      html = `
+        <div class="top"><h1>CLASIFICACIÓN FINAL</h1></div>
+        <div class="card slide-enter">
+          ${tabla.map((j,i)=>{
+            const tg = tagsFor(j);
+            return `
+            <div class="ranking-row">
+              <div class="rank-pos">${i+1}</div>
+              <img src="${avatarSrc(photoOf(j.id))}">
+              <div class="rn">
+                ${esc(j.nombre)}
+                ${tg.length? `<div class="tag-labels">${tg.map(t=>`<span class="tag-pill">${t}</span>`).join('')}</div>` : ''}
+              </div>
+              <div class="rv">${j.numVictimas} víctimas</div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="card center">
+          <p class="hint"><strong>El Asesino</strong> es un juego creado por Roberto González Arranz.</p>
+          <p class="hint">Gracias por jugar — espero que hayáis disfrutado cazándoos los unos a los otros.</p>
+        </div>
+        <div class="card center">
+          <p class="hint">¿Quieres guardar este resultado?</p>
+          <div class="row">
+            <a class="btn btn-outline" href="${waResumenUrl}" target="_blank" rel="noopener">Enviar por WhatsApp</a>
+            ${!state.emailSent? `<button class="btn btn-outline" onclick="state.showEmailForm=!state.showEmailForm; render();">Por email</button>` : ''}
+          </div>
+          ${state.emailSent? `<p class="hint" style="margin-top:8px;">Revisa tu bandeja de entrada — te lo hemos enviado.</p>` : ''}
+          ${state.showEmailForm && !state.emailSent ? `
+            <div style="margin-top:12px; text-align:left;">
+              <input type="text" id="email-input" placeholder="tu@email.com">
+              <label style="display:flex; align-items:center; gap:6px; margin-top:8px; font-size:0.8rem; color:var(--text-dim);">
+                <input type="checkbox" id="marketing-optin" style="width:auto;"> Avísame si sacáis nuevos juegos o mejoras
+              </label>
+              <button class="btn btn-gold" style="margin-top:8px;" ${state.sendingEmail?'disabled':''} onclick="actionSendEmailSummary()">${state.sendingEmail?'Enviando…':'Enviar'}</button>
+            </div>` : ''}
+        </div>
+        <div class="card center">
+          ${state.ratingSubmitted ? `
+            <p class="hint">¡Gracias por tu valoración!</p>
+          ` : `
+            <p class="hint">¿Qué te ha parecido el juego?</p>
+            <div class="stars-row">
+              ${[1,2,3,4,5].map(n=>`<span class="star-btn ${n<=(state.ratingValue||0)?'filled':''}" onclick="state.ratingValue=${n}; render();">★</span>`).join('')}
+            </div>
+            <textarea id="rating-comment" placeholder="¿Algo que mejorarías? (opcional)" style="width:100%; min-height:60px; padding:10px; border-radius:5px; border:1px solid var(--border); background:var(--panel-2); color:var(--text); font-family:inherit; font-size:1rem;"></textarea>
+            <button class="btn btn-gold" style="margin-top:10px;" ${state.ratingValue? '' : 'disabled'} onclick="actionSubmitRating('${esc(nombreValorador)}')">Enviar valoración</button>
+          `}
+        </div>
+        <div class="card center">
+          <p class="hint">¿Jugamos otra?</p>
+          <div class="row">
+            <button class="btn btn-gold" onclick="renderCreateConfig()">Jugar otra vez</button>
+            <button class="btn btn-outline" onclick="goHome()">Salir</button>
+          </div>
+        </div>
+        <div class="step-indicator">Paso 4 de 4</div>
+        <div class="slide-nav"><button class="btn btn-outline" onclick="rankingNav(-1)">← Anterior</button></div>`;
+    }
+  }
+
+  html = brandBarHtml() + html;
+  html += codeQrModalHtml();
+  app.innerHTML = html;
+  if(cambioDeVista){
+    if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    requestAnimationFrame(()=> requestAnimationFrame(()=> window.scrollTo(0,0)));
+  }
+}
+
+async function actionSendEmailSummary(){
+  const emailInput = document.getElementById('email-input');
+  const email = emailInput ? emailInput.value.trim() : '';
+  const marketingOptIn = document.getElementById('marketing-optin') ? document.getElementById('marketing-optin').checked : false;
+  if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    alert('Introduce un email válido.');
+    return;
+  }
+  state.sendingEmail = true;
+  render();
+  const result = await callAction('enviarResumen', { code: state.code, email, marketingOptIn, resumenTexto: state._lastResumenTexto || '' });
+  state.sendingEmail = false;
+  if(!result.ok){
+    alert('No se ha podido enviar el email. Inténtalo de nuevo.');
+    render();
+    return;
+  }
+  state.showEmailForm = false;
+  state.emailSent = true;
+  render();
+}
+
+async function actionSubmitRating(nombre){
+  const comentario = document.getElementById('rating-comment').value.trim();
+  state.ratingSubmitted = true; // optimista: si falla el envío no merece la pena bloquear al usuario por esto
+  render();
+  await callAction('valorar', { code: state.code, nombre, puntuacion: state.ratingValue, comentario });
+}
+
+async function loadPanelStats(){
+  try{
+    const url = `${CONFIG.APPS_SCRIPT_URL}?action=estadisticas&key=${encodeURIComponent(CONFIG.SECRET_KEY)}`;
+    const res = await fetch(url);
+    state._stats = await res.json();
+  }catch(e){ state._stats = null; }
+}
+
+function rankingNav(delta){
+  state.rankingSlide = Math.max(0, Math.min(3, (state.rankingSlide||0)+delta));
+  render();
+}
+
+function renderCreateConfig(){ state.screen='create-config'; state.cfgParticipa=undefined; state.cfgModoEspectador=undefined; state.cfgVisibilidad=undefined; render(); }
+function actionOpenSpectatorFromInside(){
+  state.role='spectator'; state.screen='spectator'; state.myPlayerId=null; render();
+}
+
+async function screenForGameState(g, role, myPlayerId){
+  if(role==='spectator') return g.estado==='finalizada' ? 'ranking' : 'spectator';
+  if(g.estado==='finalizada') return 'ranking';
+  if(role==='player'){
+    const me = g.jugadores.find(j=>j.id===myPlayerId);
+    if(!me) return null;
+    if(me.estado==='muerto') return 'dead';
+    return g.estado==='en_curso' ? 'game' : 'lobby';
+  }
+  if(role==='admin'){
+    return g.estado==='en_curso' ? 'admin-panel' : 'lobby';
+  }
+  return null;
+}
+
+(async function init(){
+  const params = new URLSearchParams(location.search);
+
+  if(params.get('panel')==='1'){
+    state.screen = 'panel';
+    render();
+    await loadPanelStats();
+    render();
+    return;
+  }
+
+  const espectadorCode = params.get('e') ? params.get('e').toUpperCase() : null;
+  const pCode = params.get('p') ? params.get('p').toUpperCase() : null;
+  const session = loadSession();
+
+  // Un enlace de espectador en la URL manda siempre sobre cualquier sesión guardada
+  if(espectadorCode){
+    if(!(session && session.code===espectadorCode)) clearSession();
+    state.code = espectadorCode; state.role = 'spectator';
+    const g = await loadGame(espectadorCode);
+    if(g){ state._game=g; state.screen='spectator'; saveSession(); startPolling(); ensurePhotos(g); }
+    else if(g===undefined){ state.error='No se ha podido conectar. Comprueba tu conexión e inténtalo de nuevo.'; }
+    else { state.error='No existe ninguna partida con ese código.'; }
+    render();
+    return;
+  }
+
+  // Un enlace de jugador en la URL manda sobre una sesión de OTRA partida distinta;
+  // si coincide con tu sesión actual, se restaura tu identidad completa en esa partida.
+  if(pCode){
+    if(session && session.code===pCode){
+      const g = await loadGame(pCode);
+      if(g){
+        const pantalla = await screenForGameState(g, session.role, session.myPlayerId);
+        if(pantalla){
+          state.code=pCode; state.role=session.role; state.myPlayerId=session.myPlayerId;
+          state._game=g; state.lastReassignSeen=g.ultimaReasignacion||null; state.screen=pantalla;
+          if(pantalla!=='ranking') startPolling();
+          render(); ensurePhotos(g);
+          return;
+        }
+      }
+      clearSession();
+    } else if(session){
+      clearSession(); // era la sesión de otra partida distinta: no la mezclamos con esta nueva
+    }
+    state.code = pCode; state.role = 'player';
+    const g = await loadGame(pCode);
+    if(g && g.estado==='inscripcion'){
+      startPolling();
+      goToJoin();
+      return;
+    }
+    else if(g){ state.error='Esta partida ya ha empezado y no admite nuevos jugadores.'; }
+    else if(g===undefined){ state.error='No se ha podido conectar. Comprueba tu conexión e inténtalo de nuevo.'; }
+    else { state.error='No existe ninguna partida con ese código.'; }
+    render();
+    return;
+  }
+
+  // Sin ningún código en la URL: restaurar la sesión guardada, la que sea
+  if(session && session.code){
+    const g = await loadGame(session.code);
+    if(g){
+      const pantalla = await screenForGameState(g, session.role, session.myPlayerId);
+      if(pantalla){
+        state.code = session.code; state.role = session.role; state.myPlayerId = session.myPlayerId;
+        state._game = g; state.lastReassignSeen = g.ultimaReasignacion || null; state.screen = pantalla;
+        if(pantalla!=='ranking') startPolling();
+        render(); ensurePhotos(g);
+        return;
+      }
+    }
+    clearSession();
+  }
+  render();
+})();
+</script>
+</body>
+</html>
