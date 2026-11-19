@@ -3,22 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>El Asesino · Amarula Trip Club</title>
-<meta name="theme-color" content="#191919">
+<title>Los Juegos del Amaruler · Amarula Trip Club</title>
+<meta name="theme-color" content="#120a14">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Cormorant+Garamond:wght@500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#191919;
-    --panel:#222120;
-    --panel-2:#2b2a28;
-    --gold:#BE8F4E;
+    --bg:#120a14;
+    --panel:rgba(42,21,48,.66);
+    --panel-2:rgba(75,37,82,.42);
+    --gold:#d2a465;
     --gold-dim:#8a6a3b;
     --blood:#8c1f28;
-    --grey-dead:#5a5957;
-    --text:#F2F1ED;
-    --text-dim:#a8a399;
-    --border:#38362f;
+    --grey-dead:#6a5a62;
+    --text:#f3e9e4;
+    --text-dim:#b7a3a8;
+    --border:rgba(210,164,101,.32);
   }
   *{box-sizing:border-box;}
   html{ background:var(--bg); }
@@ -126,7 +126,7 @@
   .hint{ color:var(--text-dim); font-size:0.8rem; margin-top:4px;}
   .photo-btn{
     background:linear-gradient(180deg,var(--panel-2),var(--panel)); border:1px solid var(--gold-dim);
-    color:var(--gold); font-family:'Cormorant Garamond',sans-serif; letter-spacing:0.05em; font-size:1.05rem;
+    color:var(--gold); font-family:'Poppins',sans-serif; letter-spacing:0.02em; font-size:0.9rem;
   }
   .photo-btn:hover{ border-color:var(--gold);}
   .info-icon{ cursor:pointer; color:var(--gold); font-style:normal; margin-left:4px;}
@@ -136,14 +136,14 @@
   .star-name{ color:var(--gold); font-weight:700;}
   .avatar-wrap.epic{ width:210px;}
   .epic-copy{ font-size:1rem; margin-top:10px; line-height:1.4;}
-  .mission-photo{ width:100%; max-width:260px; aspect-ratio:4/3; margin:0 auto 16px; display:block;}
+  .mission-photo{ width:100%; max-width:210px; aspect-ratio:1/1; margin:0 auto 16px; display:block;}
   .mission-photo img{
-    width:100%; height:100%; object-fit:cover; display:block;
-    clip-path: polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%);
+    width:100%; height:100%; object-fit:cover; object-position:center 20%; display:block;
+    clip-path: polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%);
     filter: drop-shadow(0 0 14px rgba(190,143,78,0.55));
   }
   .mission-photo.placeholder-oculto{
-    clip-path: polygon(12% 0%, 100% 0%, 88% 100%, 0% 100%);
+    clip-path: polygon(8% 0%, 100% 0%, 92% 100%, 0% 100%);
     background: linear-gradient(135deg, var(--panel-2) 0%, var(--panel) 100%);
     display:flex; align-items:center; justify-content:center;
     border:1px dashed var(--gold-dim);
@@ -161,7 +161,7 @@
     padding:4px 14px; width:fit-content; margin:0 auto 14px;
   }
   .code-pill .txt{ text-transform:uppercase;}
-  .code-pill .hint-inline{ text-transform:none; letter-spacing:normal; color:var(--text-dim); font-size:0.65rem; margin-left:6px;}
+  .code-pill .hint-inline{ text-transform:none; letter-spacing:normal; color:var(--text-dim); font-size:0.72rem; margin-left:6px;}
   @media (max-width: 360px){
     .lobby-grid, .spectator-grid{ grid-template-columns:repeat(2,1fr); }
   }
@@ -201,7 +201,7 @@
   .final-label{ text-align:center; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.18em; font-size:0.72rem; margin-bottom:6px;}
   .rank-pos{ font-family:'Cormorant Garamond',sans-serif; font-size:1.2rem; color:var(--text-dim); width:26px; text-align:center; flex-shrink:0;}
   .tag-labels{ display:flex; flex-wrap:wrap; gap:4px; margin-top:2px;}
-  .tag-pill{ font-size:0.65rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--gold); border:1px solid var(--gold-dim); border-radius:10px; padding:1px 7px;}
+  .tag-pill{ font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--gold); border:1px solid var(--gold-dim); border-radius:10px; padding:1px 7px;}
   .time-highlight{ font-family:'Cormorant Garamond',sans-serif; font-size:3rem; color:var(--gold); letter-spacing:0.03em; margin:2px 0 8px;}
   .victims-grid{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-top:14px;}
   .victim-thumb{ width:44px; height:44px; border-radius:6px; object-fit:cover; filter:grayscale(1) brightness(0.55); border:1px solid var(--grey-dead);}
@@ -226,11 +226,93 @@
   .brand-bar{ text-align:center; margin:2px 0 16px;}
   .brand-word{ font-family:'Cormorant Garamond',serif; font-weight:700; letter-spacing:0.32em; color:var(--gold); padding-left:0.32em; line-height:1;}
   .brand-word span{ display:block; font-family:'Poppins',sans-serif; font-weight:500; font-size:0.42em; letter-spacing:0.5em; margin-top:6px; padding-left:0.5em;}
+
+  /* ---- Imaginario "Juegos del Hambre" (inspirado en la guía visual): ciruela, oro, bronce rosado ---- */
+  html{ background:#120a14; }
+  body{
+    background:radial-gradient(ellipse 90% 70% at 50% 30%, #4b2552 0%, #2a1530 38%, #120a14 78%) fixed;
+    position:relative;
+  }
+  body::before{ /* viñeta */
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:radial-gradient(ellipse at 50% 40%, transparent 45%, rgba(8,3,10,.65) 100%);
+  }
+  #app{ position:relative; z-index:2; }
+  #dust{ position:fixed; inset:0; pointer-events:none; z-index:1; overflow:hidden; }
+  #dust i{
+    position:absolute; bottom:-12px; width:4px; height:4px; border-radius:50%;
+    background:radial-gradient(circle,#ffe3a3 0%,rgba(255,227,163,0) 70%);
+    opacity:0; animation:dustUp linear infinite;
+  }
+  @keyframes dustUp{
+    0%{ transform:translate3d(0,0,0) scale(.6); opacity:0; }
+    15%{ opacity:.85; }
+    100%{ transform:translate3d(var(--dx,20px),-110vh,0) scale(1.4); opacity:0; }
+  }
+  #flora{ position:fixed; left:50%; bottom:0; width:min(620px,110vw); transform:translateX(-50%); pointer-events:none; z-index:1; opacity:.42; }
+  #app{ padding-bottom:110px; }
+  h1,h2,h3,.display{ font-family:'Cinzel','Cormorant Garamond',serif; font-weight:700; letter-spacing:0.1em; }
+  .top h1{
+    font-size:2rem; line-height:1.15; letter-spacing:0.14em; text-transform:uppercase;
+    background:linear-gradient(180deg,#f9e2cc 0%,#d9a083 48%,#8a4a4a 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 14px rgba(255,200,140,.28));
+  }
+  .top p{ letter-spacing:0.08em; color:#cdb8b4; }
+  .card, .modal{
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+    box-shadow:0 8px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,227,163,.05);
+    border-radius:10px;
+  }
+  .btn-gold{
+    background:linear-gradient(135deg,#f1cd93 0%,#c99a5a 55%,#a3824d 100%); color:#1f1408;
+    box-shadow:0 0 22px rgba(237,188,122,.22); letter-spacing:.04em;
+  }
+  .btn-gold:hover{ background:linear-gradient(135deg,#ffe0a8 0%,#d8a964 55%,#b08c55 100%); box-shadow:0 0 30px rgba(237,188,122,.4); }
+  .btn-outline{ border-color:rgba(210,164,101,.45); }
+  .brand-bar img{ filter:drop-shadow(0 0 22px rgba(237,188,122,.38)); }
+  input[type=text],input[type=password],input[type=tel],textarea{ background:rgba(18,10,20,.55); }
+  @media (prefers-reduced-motion: reduce){ #dust{ display:none; } }
+  /* ---- Ajustes UX/UI (revisión) ---- */
+  .toggle-row .btn{ margin-top:0; background:transparent; color:var(--text); border:1px solid var(--border); }
+  .toggle-row .btn:disabled{ opacity:.4; }
+  .toggle-row .btn.active{ background:linear-gradient(135deg,#f1cd93 0%,#c99a5a 55%,#a3824d 100%); color:#1f1408; border-color:transparent; box-shadow:0 0 20px rgba(237,188,122,.25); }
+  .wide .counter .big{ font-size:clamp(4.5rem,11vw,9rem); }
+  .wide .counter .sub{ font-size:1.3rem; letter-spacing:.06em; }
+  .wide .spectator-grid{ gap:22px; margin-top:22px; }
+  .wide .spec-item .sname{ font-size:1.05rem; margin-top:8px; color:var(--text); }
+  .wide .spec-item img{ border-radius:14px; }
+  @media (min-width:700px){ body.spec #app{ max-width:1100px; } }
+
 </style>
 </head>
 <body>
+<svg id="flora" viewBox="0 0 760 170" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+<defs><linearGradient id="lf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6a8f6a"/><stop offset="1" stop-color="#2d4a3a"/></linearGradient>
+<radialGradient id="pt"><stop offset="0" stop-color="#ffb08a"/><stop offset="1" stop-color="#c2473f"/></radialGradient></defs>
+<g fill="url(#lf)" opacity=".9">
+<path d="M0 170 C60 120 110 120 170 150 C120 110 60 100 0 130Z"/><path d="M110 170 C170 110 230 105 300 150 C240 100 170 95 110 140Z"/>
+<path d="M760 170 C700 120 650 120 590 150 C640 110 700 100 760 130Z"/><path d="M650 170 C590 110 530 105 460 150 C520 100 590 95 650 140Z"/>
+<path d="M280 170 C330 130 380 128 430 170Z"/></g>
+<g stroke="#3d5f46" stroke-width="2" fill="none" opacity=".8"><path d="M20 168 C80 140 120 150 190 120"/><path d="M740 168 C680 140 640 150 570 120"/></g>
+<g><g transform="translate(170 118)" fill="url(#pt)"><ellipse rx="9" ry="22" transform="rotate(0)"/><ellipse rx="9" ry="22" transform="rotate(72)"/><ellipse rx="9" ry="22" transform="rotate(144)"/><ellipse rx="9" ry="22" transform="rotate(216)"/><ellipse rx="9" ry="22" transform="rotate(288)"/><circle r="6" fill="#ffd98a"/></g>
+<g transform="translate(590 112) scale(.85)" fill="url(#pt)"><ellipse rx="9" ry="22" transform="rotate(20)"/><ellipse rx="9" ry="22" transform="rotate(92)"/><ellipse rx="9" ry="22" transform="rotate(164)"/><ellipse rx="9" ry="22" transform="rotate(236)"/><ellipse rx="9" ry="22" transform="rotate(308)"/><circle r="6" fill="#ffd98a"/></g>
+<g transform="translate(375 128) scale(.7)" fill="#7a4fa0"><ellipse rx="7" ry="18" transform="rotate(0)"/><ellipse rx="7" ry="18" transform="rotate(60)"/><ellipse rx="7" ry="18" transform="rotate(120)"/><ellipse rx="7" ry="18" transform="rotate(180)"/><ellipse rx="7" ry="18" transform="rotate(240)"/><ellipse rx="7" ry="18" transform="rotate(300)"/><circle r="5" fill="#ffd98a"/></g></g>
+<g fill="#4f86d9" opacity=".95"><g transform="translate(250 70) rotate(-20)"><path d="M0 0 C-22 -24 -34 -4 -18 8 C-26 16 -10 24 0 8Z"/><path d="M0 0 C22 -24 34 -4 18 8 C26 16 10 24 0 8Z"/></g>
+<g transform="translate(520 58) rotate(15) scale(.8)"><path d="M0 0 C-22 -24 -34 -4 -18 8 C-26 16 -10 24 0 8Z"/><path d="M0 0 C22 -24 34 -4 18 8 C26 16 10 24 0 8Z"/></g></g>
+</svg>
+<div id="dust"></div>
 <div id="app"></div>
 
+<script>
+(function(){ try{
+  var d=document.getElementById('dust'); if(!d) return;
+  for(var i=0;i<28;i++){ var s=document.createElement('i'); var sz=2+Math.random()*4;
+    s.style.left=(Math.random()*100)+'%'; s.style.width=s.style.height=sz+'px';
+    s.style.animationDuration=(14+Math.random()*16)+'s'; s.style.animationDelay=(-Math.random()*26)+'s';
+    s.style.setProperty('--dx',((Math.random()*60)-30)+'px'); d.appendChild(s); }
+}catch(e){} })();
+</script>
 <script>
 // ==== CONFIGURA ESTO ANTES DE SUBIR EL ARCHIVO ====
 const CONFIG = {
@@ -431,7 +513,7 @@ function shareSpectatorUrlFor(code){
   return base + '?e=' + code;
 }
 function trySetSpectatorFull(){
-  if(state._game && state._game.modoEspectador==='completo'){ state.spectatorMode='full'; render(); }
+  if(state._game && state._game.modoEspectador==='completo'){ state.spectatorMode='full'; state._specTouched=true; render(); }
 }
 function copyLink(url){
   navigator.clipboard.writeText(url).then(()=>alert('Enlace copiado')).catch(()=>alert(url));
@@ -794,7 +876,7 @@ function formatElapsed(ms){
   return (h>0? h+'h ':'') + m+'min';
 }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-function avatarSrc(foto){ return foto || 'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%231d1d22"/></svg>'); }
+function avatarSrc(foto){ return foto || 'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4b2552"/><stop offset="1" stop-color="#1c0f22"/></linearGradient></defs><rect width="200" height="200" fill="url(#g)"/><circle cx="100" cy="78" r="34" fill="#8a6a8f" opacity=".75"/><path d="M34 200 C34 140 70 120 100 120 C130 120 166 140 166 200Z" fill="#8a6a8f" opacity=".75"/></svg>'); }
 function codePillHtml(){
   return `<div class="code-pill" onclick="state.showCodeQr=true; render();"><span class="txt">Partida: ${esc(state.code)}</span><span class="hint-inline">Toca para ver el QR</span></div>`;
 }
@@ -816,6 +898,7 @@ function codeQrModalHtml(){
 
 function render(){
   document.body.classList.toggle('wide', state.screen==='spectator' || state.screen==='admin-panel' || state.screen==='panel');
+  document.body.classList.toggle('spec', state.screen==='spectator');
   const renderKey = state.screen + ':' + (state.rankingSlide||0);
   const cambioDeVista = state._lastRenderKey !== renderKey;
   state._lastRenderKey = renderKey;
@@ -824,7 +907,7 @@ function render(){
 
   if(state.screen==='home'){
     html = `
-      <div class="top"><h1>EL ASESINO</h1><p>Un objetivo. Una misión. Un superviviente.</p></div>
+      <div class="top"><h1>LOS JUEGOS DEL AMARULER</h1><p>Un objetivo. Una misión. Un superviviente.</p></div>
       <div class="card">
         <p class="hint">Recuerda: consigue que sea tu objetivo quien haga la acción asignada — nunca al revés.</p>
         <button class="btn btn-gold" onclick="renderCreateConfig()">Crear partida</button>
@@ -929,7 +1012,7 @@ function render(){
   else if(state.screen==='created'){
     const url = shareUrlFor(state.code);
     const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(url);
-    const waUrl = 'https://wa.me/?text=' + encodeURIComponent('Únete a la partida de El Asesino: ' + url);
+    const waUrl = 'https://wa.me/?text=' + encodeURIComponent('Únete a la partida de Los Juegos del Amaruler: ' + url);
     html = `
       <div class="top"><h1>PARTIDA CREADA</h1></div>
       <div class="card center">
@@ -942,7 +1025,7 @@ function render(){
           <a class="btn btn-outline" href="${waUrl}" target="_blank" rel="noopener">WhatsApp</a>
         </div>
         ${state.adminParticipaFlag ? '' : `<p class="hint">Si sales sin querer del panel, podrás volver con tu nombre y PIN desde "¿Perdiste el acceso...? Recupéralo aquí" en la pantalla de inicio.</p>`}
-        <button class="btn btn-gold" onclick="${state.adminParticipaFlag ? 'goToJoin()' : "state.screen='lobby'; render();"}">${state.adminParticipaFlag? 'Continuar y crear tu perfil' : 'Ir a la sala de espera'}</button>
+        <button class="btn btn-gold" onclick="${state.adminParticipaFlag ? 'goToJoin()' : "state.screen='lobby'; render(); pollTick();"}">${state.adminParticipaFlag? 'Continuar y crear tu perfil' : 'Ir a la sala de espera'}</button>
       </div>
       <div class="footer-nav"><a onclick="goHome()">← Cancelar</a></div>`;
   }
@@ -986,8 +1069,8 @@ function render(){
         <label>Tu nombre</label>
         <input type="text" id="j-nombre" value="${esc(profile.nombre||'')}" placeholder="Nombre visible para los demás">
         <label>Propón una acción para matar <span class="info-icon" onclick="toggleAccionHint()">ⓘ</span></label>
-        ${state.showAccionHint? `<p class="hint">Ideas: que te dé un masaje, que brinde contigo, que te haga una foto juntos, que te cuente un secreto... Cuanto más fácil de pedir sin levantar sospechas y más divertida, ¡mejor será el juego!</p>` : ''}
-        <input type="text" id="j-accion" placeholder="Ej: que te dé un masaje">
+        ${state.showAccionHint? `<p class="hint">Ideas: que te cuente su destino soñado, que brinde contigo, que te haga una foto juntos, que te cuente un secreto... Cuanto más fácil de pedir sin levantar sospechas y más divertida, ¡mejor será el juego!</p>` : ''}
+        <input type="text" id="j-accion" placeholder="Ej: que te cuente su destino soñado">
         <label>Tu PIN secreto (4 números)</label>
         <input type="tel" id="j-pin" maxlength="4" placeholder="0000">
         <p class="hint">Dale este PIN solo a quien consiga matarte, en el momento en que lo logre.</p>
@@ -1012,7 +1095,7 @@ function render(){
             <div class="lobby-item">
               <img src="${avatarSrc(photoOf(j.id))}">
               <div class="lname">${esc(j.nombre)}</div>
-              ${puedeIniciar? `<a onclick="actionEliminarJugador('${j.id}','${esc(j.nombre)}')" style="color:var(--blood); font-size:0.68rem; cursor:pointer; text-decoration:underline;">Eliminar</a>` : ''}
+              ${puedeIniciar? `<a onclick="actionEliminarJugador('${j.id}','${esc(j.nombre)}')" style="color:var(--blood); font-size:0.75rem; cursor:pointer; text-decoration:underline; display:inline-block; padding:4px 6px;">Eliminar</a>` : ''}
             </div>`).join('')}
         </div>
         ${jugadores.length===0? '<p class="hint center">Aún no se ha unido nadie.</p>':''}
@@ -1021,7 +1104,7 @@ function render(){
         <div class="card">
           <div class="row">
             <button class="btn btn-outline" onclick="copyLink('${shareUrlFor(state.code)}')">Copiar enlace</button>
-            <a class="btn btn-outline" href="https://wa.me/?text=${encodeURIComponent('Únete a la partida de El Asesino: '+shareUrlFor(state.code))}" target="_blank" rel="noopener">WhatsApp</a>
+            <a class="btn btn-outline" href="https://wa.me/?text=${encodeURIComponent('Únete a la partida de Los Juegos del Amaruler: '+shareUrlFor(state.code))}" target="_blank" rel="noopener">WhatsApp</a>
           </div>
           <button class="btn btn-gold" ${jugadores.length<4?'disabled':''} onclick="actionStartGame()">Iniciar partida</button>
           <p class="hint">Se necesitan al menos 4 jugadores.</p>
@@ -1193,13 +1276,14 @@ function render(){
       </div>
       <div class="card">
         <h3 style="margin-bottom:10px;">Jugadores</h3>
+        <div class="counter" style="margin:6px 0 0;"><div class="sub" style="font-size:1.3rem;"><strong style="color:var(--gold);">${vivos.length}</strong> de ${g.jugadores.length} siguen en pie</div></div>
         <div class="spectator-grid">
           ${g.jugadores.map(j=>`
             <div class="spec-item ${j.estado==='muerto'?'dead':''}">
               <img src="${avatarSrc(photoOf(j.id))}">
               <div class="sname">${esc(j.nombre)}${j.esAdmin?' 👑':''}</div>
               <div class="hint">${j.numVictimas} víctimas</div>
-              <a onclick="actionVerPin('${j.id}','${esc(j.nombre)}')" style="color:var(--gold); font-size:0.68rem; cursor:pointer; text-decoration:underline;">Ver PIN</a>
+              <a onclick="actionVerPin('${j.id}','${esc(j.nombre)}')" style="color:var(--gold); font-size:0.75rem; cursor:pointer; text-decoration:underline; display:inline-block; padding:4px 6px;">Ver PIN</a>
             </div>`).join('')}
         </div>
       </div>
@@ -1219,10 +1303,11 @@ function render(){
     } else {
     const permiteCompleto = g.modoEspectador==='completo';
     if(!permiteCompleto) state.spectatorMode='anon';
+    else if(!state._specTouched) state.spectatorMode='full';
     html = `
       <div class="top"><h1>MARCADOR EN VIVO</h1><p>Partida ${esc(state.code)}</p></div>
       <div class="toggle-row">
-        <button class="btn ${state.spectatorMode==='anon'?'active':''}" onclick="state.spectatorMode='anon'; render();">Anonimizado</button>
+        <button class="btn ${state.spectatorMode==='anon'?'active':''}" onclick="state.spectatorMode='anon'; state._specTouched=true; render();">Anonimizado</button>
         <button class="btn ${state.spectatorMode==='full'?'active':''}" ${permiteCompleto?'':'disabled'} onclick="trySetSpectatorFull()">Completo</button>
       </div>
       ${!permiteCompleto? '<p class="hint center">El organizador ha desactivado la vista con caras y nombres.</p>' : ''}
@@ -1231,6 +1316,7 @@ function render(){
           <div class="big">${vivos} / ${g.jugadores.length}</div>
           <div class="sub">supervivientes en juego</div>
         </div>` : `
+        <div class="counter" style="margin:6px 0 0;"><div class="sub" style="font-size:1.3rem;"><strong style="color:var(--gold);">${vivos}</strong> de ${g.jugadores.length} siguen en pie</div></div>
         <div class="spectator-grid">
           ${g.jugadores.map(j=>`
             <div class="spec-item ${j.estado==='muerto'?'dead':''}">
@@ -1387,7 +1473,7 @@ function render(){
         if(state.role==='spectator') return 'Espectador';
         return 'Organizador';
       })();
-      let resumenTexto = '🎭 ¡LA PARTIDA HA TERMINADO! 🎭\n\nEstos son los resultados de nuestra partida a El Asesino:\n\n';
+      let resumenTexto = '🎭 ¡LA PARTIDA HA TERMINADO! 🎭\n\nEstos son los resultados de nuestra partida de Los Juegos del Amaruler:\n\n';
       if(superviviente) resumenTexto += `🏆 Superviviente: ${superviviente.nombre}\n`;
       if(veloz) resumenTexto += `⚡ Asesino más rápido: ${veloz.nombre}\n`;
       if(serie) resumenTexto += `🔪 Asesino en serie: ${serie.nombre} (${serie.numVictimas} víctimas)\n`;
@@ -1415,7 +1501,7 @@ function render(){
           }).join('')}
         </div>
         <div class="card center">
-          <p class="hint"><strong>El Asesino</strong> es un juego creado por Roberto González Arranz.</p>
+          <p class="hint"><strong>Los Juegos del Amaruler</strong> es un juego creado por Roberto González Arranz.</p>
           <p class="hint">Gracias por jugar — espero que hayáis disfrutado cazándoos los unos a los otros.</p>
         </div>
         <div class="card center">
