@@ -1012,7 +1012,7 @@ function render(){
   else if(state.screen==='created'){
     const url = shareUrlFor(state.code);
     const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(url);
-    const waUrl = 'https://wa.me/?text=' + encodeURIComponent('Únete a la partida de Los Juegos del Amaruler: ' + url);
+    const waUrl = 'https://wa.me/?text=' + encodeURIComponent('🎭 Únete a la partida de Los Juegos del Amaruler, un juego para pasarlo bien y conocernos entre todos: ' + url);
     html = `
       <div class="top"><h1>PARTIDA CREADA</h1></div>
       <div class="card center">
@@ -1033,7 +1033,7 @@ function render(){
   else if(state.screen==='tutorial'){
     const step = state.tutorialStep||0;
     const pasos = [
-      { titulo:'¿CÓMO FUNCIONA?', texto:'Vas a recibir un objetivo: otra persona de la partida. Tu misión es conseguir que ESA PERSONA haga, sin sospechar, una acción secreta que tú le asignarás.' },
+      { titulo:'¿CÓMO FUNCIONA?', texto:'Vas a recibir un objetivo: otra persona de la partida. Tu misión es conseguir que ESA PERSONA haga, sin sospechar, una acción secreta que tú le asignarás. Y lo importante de verdad: que habléis, os mováis y os conozcáis entre todos, incluso entre desconocidos. Da igual ganar o perder.' },
       { titulo:'CUANDO LO CONSIGUES', texto:'En cuanto tu objetivo hace la acción, queda eliminado. Heredas automáticamente a quién estaba cazando él y con qué acción — y sigues cazando. Al final solo queda un superviviente.' },
       { titulo:'ELIGE BIEN TU ACCIÓN', texto:'Tu acción no volverá necesariamente a ti — se reparte al azar entre todos, y puede tocarle a cualquiera para usarla sobre cualquier objetivo. Por eso cuanto más realista y fácil de pedir sin levantar sospechas sea, más divertida será para todo el grupo.' }
     ];
@@ -1104,7 +1104,7 @@ function render(){
         <div class="card">
           <div class="row">
             <button class="btn btn-outline" onclick="copyLink('${shareUrlFor(state.code)}')">Copiar enlace</button>
-            <a class="btn btn-outline" href="https://wa.me/?text=${encodeURIComponent('Únete a la partida de Los Juegos del Amaruler: '+shareUrlFor(state.code))}" target="_blank" rel="noopener">WhatsApp</a>
+            <a class="btn btn-outline" href="https://wa.me/?text=${encodeURIComponent('🎭 Únete a la partida de Los Juegos del Amaruler, un juego para pasarlo bien y conocernos entre todos: '+shareUrlFor(state.code))}" target="_blank" rel="noopener">WhatsApp</a>
           </div>
           <button class="btn btn-gold" ${jugadores.length<4?'disabled':''} onclick="actionStartGame()">Iniciar partida</button>
           <p class="hint">Se necesitan al menos 4 jugadores.</p>
@@ -1480,7 +1480,7 @@ function render(){
       else if(serieDuo) resumenTexto += `🔪 Asesinos en serie: ${serieDuo.map(j=>j.nombre).join(' y ')}\n`;
       resumenTexto += '\n📋 Clasificación completa:\n';
       tabla.forEach((j,i)=>{ resumenTexto += `${i+1}. ${j.nombre} - ${j.numVictimas} víctimas\n`; });
-      resumenTexto += '\n¿Os apuntáis a la revancha? 😏\nCrea tu propia partida gratis en: https://www.gotelin.com/juegos';
+      resumenTexto += '\n💜 Lo importante de verdad: hemos hablado, jugado y conocido a gente nueva. Da igual quién haya ganado o perdido.\n\n¿Os apuntáis a la revancha? 😏\nJuega a Los Juegos del Amaruler en: https://www.gotelin.com/juegos';
       state._lastResumenTexto = resumenTexto;
       const waResumenUrl = 'https://wa.me/?text=' + encodeURIComponent(resumenTexto);
       html = `
@@ -1502,7 +1502,7 @@ function render(){
         </div>
         <div class="card center">
           <p class="hint"><strong>Los Juegos del Amaruler</strong> es un juego creado por Roberto González Arranz.</p>
-          <p class="hint">Gracias por jugar — espero que hayáis disfrutado cazándoos los unos a los otros.</p>
+          <p class="hint">El verdadero objetivo era que hablarais, interactuarais y os conocierais entre todos, incluso entre desconocidos. Da igual quién haya ganado o perdido: gracias por jugar.</p>
         </div>
         <div class="card center">
           <p class="hint">¿Quieres guardar este resultado?</p>
