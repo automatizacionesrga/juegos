@@ -816,7 +816,18 @@ async function actionSolicitarCambio(){
 }
 
 function accionesAbrir(){
-  state._accDraft = ((state._game && state._game.accionesOrganizador) || []).slice();
+  const g = state._game || {};
+  let lista = (g.accionesOrganizador || []).slice();
+  state._accPrecargada = false;
+  if(!lista.length){
+    // Sin lista propia: se precarga con las propuestas de los jugadores para poder editarlas/borrarlas
+    (g.jugadores||[]).forEach(j=>{
+      const a = (j.accion||'').trim().slice(0,120);
+      if(a && !lista.includes(a) && lista.length<60) lista.push(a);
+    });
+    state._accPrecargada = lista.length>0;
+  }
+  state._accDraft = lista;
   state._accError = null; state.showAccionesModal = true; render();
 }
 function accionesCerrar(){ state.showAccionesModal = false; state._accError = null; render(); }
@@ -854,10 +865,8 @@ function accionesModalHtml(g){
     <div class="modal-bg">
       <div class="modal" style="max-height:88vh; overflow:auto;">
         <h3 style="margin-bottom:6px;">Acciones de reserva</h3>
-        <p class="hint" style="margin-bottom:10px;">${draft.length
-          ? 'Cuando apruebes un cambio de misión, la nueva acción saldrá al azar de esta lista.'
-          : 'Ahora tu lista está vacía: los cambios salen de las acciones que propusieron los jugadores. Si añades alguna aquí, los cambios saldrán solo de tu lista.'}
-          No cambia las acciones que ya tienen los jugadores.</p>
+        <p class="hint" style="margin-bottom:10px;">Cuando apruebes un cambio de misión, la nueva acción saldrá al azar de esta lista. No cambia las acciones que ya tienen los jugadores.</p>
+        <p class="hint" style="margin-bottom:10px;"><strong>Cómo se usa:</strong> escribe sobre una acción para cambiarla, pulsa ✕ para borrarla, o escribe abajo una nueva y pulsa «Añadir». Al terminar, pulsa «Guardar cambios».${state._accPrecargada?' <em>Hemos cargado aquí las acciones que propusieron los jugadores para que puedas editarlas.</em>':''}</p>
         ${draft.map((a,i)=>`
           <div style="display:flex; gap:6px; margin-bottom:6px;">
             <input type="text" maxlength="120" value="${esc(a)}" oninput="state._accDraft[${i}]=this.value" style="flex:1; margin:0;">
@@ -868,11 +877,10 @@ function accionesModalHtml(g){
           <button class="btn btn-gold" style="flex:none; width:auto; padding:8px 14px;" onclick="accionesAnadir()">Añadir</button>
         </div>
         ${state._accError? `<div class="err">${esc(state._accError)}</div>`:''}
-        <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--border);">
-          <p class="hint" style="margin-bottom:6px;"><strong>Propuestas de los jugadores</strong> (${props.length})</p>
-          ${props.length? props.map(j=>`<div class="hint" style="margin:2px 0;">· ${esc(j.accion)} <span style="opacity:.6;">— ${esc(j.nombre)}</span></div>`).join('') : '<p class="hint">Nadie ha propuesto ninguna.</p>'}
-          ${faltan? `<button class="btn btn-outline" style="margin-top:8px;" onclick="accionesImportar()">Añadir a mi lista las que faltan (${faltan})</button>`:''}
-        </div>
+        ${faltan? `<div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--border);">
+          <p class="hint" style="margin-bottom:6px;">Hay ${faltan} acción(es) propuesta(s) por jugadores que no están en tu lista.</p>
+          <button class="btn btn-outline" onclick="accionesImportar()">Añadir a la lista las propuestas de jugadores que faltan (${faltan})</button>
+        </div>`:''}
         <button class="btn btn-gold" style="margin-top:14px;" ${state._accGuardando?'disabled':''} onclick="accionesGuardar()">${state._accGuardando?'Guardando…':'Guardar cambios'}</button>
         <button class="btn btn-outline" style="margin-top:8px;" onclick="accionesCerrar()">Cancelar</button>
       </div>
