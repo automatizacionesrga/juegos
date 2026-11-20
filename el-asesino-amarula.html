@@ -284,6 +284,24 @@
   .wide .spec-item img{ border-radius:14px; }
   @media (min-width:700px){ body.spec #app{ max-width:1100px; } }
 
+
+  /* ---- Panel de analítica ---- */
+  .fun-row{ margin-bottom:12px; }
+  .fun-head{ display:flex; justify-content:space-between; font-size:.95rem; margin-bottom:4px; }
+  .fun-head strong{ color:var(--gold); font-size:1.15rem; }
+  .fun-bar{ height:12px; border-radius:6px; background:rgba(255,255,255,.08); overflow:hidden; }
+  .fun-fill{ height:100%; background:linear-gradient(90deg,var(--gold-dim),var(--gold)); border-radius:6px; }
+  .fun-fill.ok{ background:linear-gradient(90deg,#6aa37a,#9bd1a8); }
+  .fun-note{ font-size:.8rem; color:var(--text-dim); margin-top:3px; }
+  .fun-split{ display:grid; gap:10px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border); font-size:.95rem; }
+  .fun-split strong{ color:var(--gold); }
+  .fun-split .hint-inline{ display:block; font-size:.8rem; color:var(--text-dim); margin-top:2px; }
+  .tbl-wrap{ overflow-x:auto; margin-top:12px; }
+  .tbl{ width:100%; border-collapse:collapse; font-size:.85rem; min-width:620px; }
+  .tbl th{ text-align:left; color:var(--gold); font-weight:600; padding:8px 8px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  .tbl td{ padding:8px 8px; border-bottom:1px solid rgba(255,255,255,.06); vertical-align:top; }
+  details.card summary{ list-style:none; }
+  details.card summary::-webkit-details-marker{ display:none; }
 </style>
 </head>
 <body>
@@ -1330,24 +1348,47 @@ function render(){
 
   else if(state.screen==='panel'){
     const s = state._stats;
-    if(!s){
-      html = `<div class="top"><h1>ANALÍTICA</h1></div><div class="card center"><p class="hint">Cargando estadísticas…</p></div>`;
+    if(!s || s.error){
+      html = `<div class="top"><h1>ANALÍTICA</h1></div><div class="card center"><p class="hint">${s&&s.error?'No se han podido cargar los datos.':'Cargando estadísticas…'}</p></div>`;
     } else {
+      const pct = (n,d)=> d? Math.round(n*100/d)+'%' : '—';
+      const w = (n,d)=> d? Math.max(3, Math.round(n*100/d)) : 0;
       const tipos = Object.keys(s.tiposEvento||{});
+      const fila = (label, n, base, nota, cls)=>`
+        <div class="fun-row">
+          <div class="fun-head"><span>${label}</span><strong>${n}</strong></div>
+          <div class="fun-bar"><div class="fun-fill ${cls||''}" style="width:${w(n,base)}%"></div></div>
+          ${nota? `<div class="fun-note">${nota}</div>`:''}
+        </div>`;
+      const det = state._detalle;
       html = `
-        <div class="top"><h1>ANALÍTICA</h1><p>Datos agregados de todas las partidas</p></div>
+        <div class="top"><h1>ANALÍTICA</h1><p>Los Juegos del Amaruler · uso de la herramienta</p></div>
+
+        <div class="card">
+          <h3 style="margin-bottom:10px;">Partidas: de la creación al final</h3>
+          ${fila('Creadas', s.creadas, s.creadas, '')}
+          ${fila('Iniciadas (partidas reales)', s.iniciadas, s.creadas, pct(s.iniciadas,s.creadas)+' de las creadas')}
+          ${fila('Completadas', s.completadas, s.creadas, pct(s.completadas,s.iniciadas)+' de las iniciadas', 'ok')}
+          <div class="fun-split">
+            <div><strong>${s.sinIniciar}</strong> creadas sin iniciar
+              <span class="hint-inline">${s.sinIniciarActivas} esperando jugadores (actividad en las últimas ${s.umbralHoras} h) · ${s.sinIniciarAbandonadas} abandonadas</span></div>
+            <div><strong>${s.enCurso}</strong> iniciadas sin terminar
+              <span class="hint-inline">${s.enCursoActivas} en juego ahora (actividad en las últimas ${s.umbralHoras} h) · ${s.enCursoParadas} paradas</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:10px;">Jugadores</h3>
+          ${fila('Abrieron el formulario de unirse', s.aperturasFormularioUnirse, s.aperturasFormularioUnirse, 'Cuenta cada apertura del enlace de una partida')}
+          ${fila('Se apuntaron', s.jugadoresApuntados, s.aperturasFormularioUnirse, pct(s.jugadoresApuntados,s.aperturasFormularioUnirse)+' de las aperturas', 'ok')}
+        </div>
+
         <div class="stat-grid">
-          <div class="stat-card"><div class="num">${s.totalPartidas}</div><div class="lbl">Partidas creadas</div></div>
-          <div class="stat-card"><div class="num">${s.totalJugadores}</div><div class="lbl">Jugadores totales</div></div>
-          <div class="stat-card"><div class="num">${s.mediaJugadoresPorPartida}</div><div class="lbl">Jugadores de media (por partida)</div></div>
-          <div class="stat-card"><div class="num">${s.mediaJugadoresPorPartidaCompletada}</div><div class="lbl">Jugadores de media (partidas completadas)</div></div>
-          <div class="stat-card"><div class="num">${s.partidasCompletadas}</div><div class="lbl">Partidas completadas</div></div>
-          <div class="stat-card"><div class="num">${s.partidasEnCurso}</div><div class="lbl">En curso ahora</div></div>
-          <div class="stat-card"><div class="num">${s.partidasSinIniciar}</div><div class="lbl">Creadas sin iniciar</div></div>
-          <div class="stat-card"><div class="num">${s.duracionMediaMinutos}</div><div class="lbl">Minutos de duración media</div></div>
-          <div class="stat-card"><div class="num">${s.totalAperturasInscripcion}</div><div class="lbl">Aperturas del formulario</div></div>
+          <div class="stat-card"><div class="num">${s.mediaJugadoresIniciada}</div><div class="lbl">Jugadores por partida iniciada (${s.iniciadas})</div></div>
+          <div class="stat-card"><div class="num">${s.mediaJugadoresCompletada}</div><div class="lbl">Jugadores por partida completada (${s.completadas})</div></div>
+          <div class="stat-card"><div class="num">${s.duracionMediaMinutos}</div><div class="lbl">Minutos de duración media (${s.partidasConDuracion} completadas)</div></div>
           <div class="stat-card"><div class="num">${s.organizadoresUnicos}</div><div class="lbl">Organizadores únicos</div></div>
-          <div class="stat-card"><div class="num">${s.organizadoresRecurrentes}</div><div class="lbl">Organizadores recurrentes</div></div>
+          <div class="stat-card"><div class="num">${s.organizadoresRecurrentes}</div><div class="lbl">Organizadores que repiten</div></div>
           <div class="stat-card"><div class="num">${s.valoracionMedia||'—'}</div><div class="lbl">Valoración media (${s.totalValoraciones})</div></div>
           <div class="stat-card"><div class="num">${s.totalContactosEmail}</div><div class="lbl">Emails recogidos</div></div>
         </div>
@@ -1356,7 +1397,32 @@ function render(){
           <h3 style="margin-bottom:8px;">Tipos de evento</h3>
           ${tipos.map(t=>`<div class="ranking-row"><div class="rn">${esc(t)}</div><div class="rv">${s.tiposEvento[t]}</div></div>`).join('')}
         </div>` : ''}
-        <div class="footer-nav"><a onclick="loadPanelStats().then(render)">Actualizar</a></div>`;
+
+        <details class="card" style="margin-top:14px;" ${state._detOpen?'open':''} ontoggle="state._detOpen=this.open">
+          <summary style="cursor:pointer; font-weight:600; color:var(--gold);">Detalle de las partidas</summary>
+          ${det && det.partidas ? `
+            <div class="tbl-wrap"><table class="tbl">
+              <thead><tr><th>Código</th><th>Organizador</th><th>Creada</th><th>Última actividad</th><th>Estado</th><th>Jugadores</th><th>Duración</th></tr></thead>
+              <tbody>${det.partidas.length? det.partidas.map(x=>`<tr>
+                <td>${esc(x.codigo)}</td>
+                <td>${esc(x.organizador||'—')}</td>
+                <td>${fmtFechaHora(x.creadaEn)}</td>
+                <td>${fmtFechaHora(x.ultimaActividad)}</td>
+                <td><span class="tag-pill">${estadoPartidaTexto(x)}</span></td>
+                <td>${x.jugadores}${x.estado!=='sin_iniciar'? ' ('+x.vivos+' vivos)':''}</td>
+                <td>${x.iniciadaEn && x.finalizadaEn? Math.round((x.finalizadaEn-x.iniciadaEn)/60000)+' min' : '—'}</td>
+              </tr>`).join('') : '<tr><td colspan="7">Aún no hay partidas.</td></tr>'}</tbody>
+            </table></div>
+            <p class="hint" style="margin-top:8px;">Las partidas creadas antes de esta versión no tienen fecha de creación.</p>`
+          : `
+            <div style="margin-top:12px;">
+              <p class="hint">Introduce el código del panel para ver nombres de organizadores y fechas.</p>
+              <input type="password" id="panel-pin" placeholder="Código del panel" value="${esc(state._panelPin||'')}" style="margin-top:8px;">
+              ${state._detError? `<p class="hint" style="color:var(--blood-bright,#e05a5a);">${state._detError}</p>`:''}
+              <button class="btn btn-gold" style="margin-top:8px;" onclick="unlockDetalle()">Ver detalle</button>
+            </div>`}
+        </details>
+        <div class="footer-nav"><a onclick="loadPanelStats().then(()=>loadPanelDetalle()).then(render)">Actualizar</a></div>`;
     }
   }
 
@@ -1589,30 +1655,36 @@ async function loadPanelStats(){
     state._stats = await res.json();
   }catch(e){ state._stats = null; }
 }
-
-function rankingNav(delta){
-  state.rankingSlide = Math.max(0, Math.min(3, (state.rankingSlide||0)+delta));
+async function loadPanelDetalle(){
+  const pin = state._panelPin;
+  if(!pin){ state._detalle = null; return; }
+  try{
+    const url = `${CONFIG.APPS_SCRIPT_URL}?action=detalle&key=${encodeURIComponent(CONFIG.SECRET_KEY)}&pin=${encodeURIComponent(pin)}`;
+    const res = await fetch(url);
+    const d = await res.json();
+    if(d && d.partidas){ state._detalle = d; state._detError = null; }
+    else { state._detalle = null; state._detError = 'Código incorrecto.'; state._panelPin = null; try{ sessionStorage.removeItem('amaruler-panel-pin'); }catch(e){} }
+  }catch(e){ state._detalle = null; state._detError = 'No se ha podido conectar.'; }
+}
+async function unlockDetalle(){
+  const el = document.getElementById('panel-pin');
+  state._panelPin = el ? el.value.trim() : '';
+  state._detOpen = true;
+  if(!state._panelPin){ state._detError='Escribe el código.'; render(); return; }
+  try{ sessionStorage.setItem('amaruler-panel-pin', state._panelPin); }catch(e){}
+  await loadPanelDetalle();
   render();
 }
-
-function renderCreateConfig(){ state.screen='create-config'; state.cfgParticipa=undefined; state.cfgModoEspectador=undefined; state.cfgVisibilidad=undefined; render(); }
-function actionOpenSpectatorFromInside(){
-  state.role='spectator'; state.screen='spectator'; state.myPlayerId=null; render();
+function fmtFechaHora(ms){
+  if(!ms) return '—';
+  try{
+    return new Date(ms).toLocaleString('es-ES', { timeZone:'Europe/Madrid', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+  }catch(e){ return '—'; }
 }
-
-async function screenForGameState(g, role, myPlayerId){
-  if(role==='spectator') return g.estado==='finalizada' ? 'ranking' : 'spectator';
-  if(g.estado==='finalizada') return 'ranking';
-  if(role==='player'){
-    const me = g.jugadores.find(j=>j.id===myPlayerId);
-    if(!me) return null;
-    if(me.estado==='muerto') return 'dead';
-    return g.estado==='en_curso' ? 'game' : 'lobby';
-  }
-  if(role==='admin'){
-    return g.estado==='en_curso' ? 'admin-panel' : 'lobby';
-  }
-  return null;
+function estadoPartidaTexto(x){
+  if(x.estado==='completada') return 'Completada';
+  if(x.estado==='en_curso') return x.viva? 'En juego ahora' : 'Parada (sin terminar)';
+  return x.viva? 'Esperando jugadores' : 'Abandonada (sin iniciar)';
 }
 
 (async function init(){
@@ -1620,8 +1692,10 @@ async function screenForGameState(g, role, myPlayerId){
 
   if(params.get('panel')==='1'){
     state.screen = 'panel';
+    try{ state._panelPin = sessionStorage.getItem('amaruler-panel-pin') || null; }catch(e){}
     render();
     await loadPanelStats();
+    await loadPanelDetalle();
     render();
     return;
   }
