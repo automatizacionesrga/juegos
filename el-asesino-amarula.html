@@ -1412,6 +1412,31 @@ function render(){
           ${tipos.map(t=>`<div class="ranking-row"><div class="rn">${esc(t)}</div><div class="rv">${s.tiposEvento[t]}</div></div>`).join('')}
         </div>` : ''}
 
+        ${det && det.partidas ? (()=>{
+          const vivas = det.partidas.filter(x=>x.estado==='en_curso').sort((a,b)=>(b.ultimaActividad||0)-(a.ultimaActividad||0));
+          return `<div class="card" style="margin-top:14px;">
+            <h3 style="margin-bottom:4px;">Ayuda a distancia</h3>
+            <p class="hint" style="margin:0 0 10px;">Partidas iniciadas y sin terminar. El enlace te abre la partida como organizador, sin cambiar nada.</p>
+            ${vivas.length? vivas.map(x=>`
+              <div class="part open" style="padding:11px 12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                  <div class="part-org">${esc(x.organizador||'Sin nombre')}</div>
+                  <span class="tag-pill">${x.viva?'Activa':'Parada'}</span>
+                </div>
+                <div class="part-facts" style="border-top:none; padding-bottom:6px;">
+                  <div><span>Código</span><strong style="letter-spacing:.08em;">${esc(x.codigo)}</strong></div>
+                  <div><span>PIN del organizador</span><strong style="letter-spacing:.08em;">${esc(x.organizadorPin||'—')}</strong></div>
+                  <div><span>Jugadores</span>${x.jugadores} (${x.vivos} en pie)</div>
+                  <div><span>Última actividad</span>${fmtFechaHora(x.ultimaActividad)}</div>
+                </div>
+                ${x.organizador && x.organizadorPin ? `<div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <a class="btn btn-gold" style="width:auto; padding:9px 14px; text-decoration:none; font-size:.85rem;" href="${esc(enlaceAyuda(x))}" target="_blank" rel="noopener">Abrir como organizador</a>
+                  <button class="btn btn-outline" style="width:auto; padding:9px 14px; font-size:.85rem;" onclick="copiarEnlaceAyuda('${esc(x.codigo)}', this)">Copiar enlace</button>
+                </div>` : '<p class="hint">Esta partida no tiene nombre o PIN de organizador guardado.</p>'}
+              </div>`).join('') : '<p class="hint">Ahora mismo no hay partidas iniciadas sin terminar.</p>'}
+          </div>`;
+        })() : ''}
+
         <div class="card" style="margin-top:14px;">
           <h3 style="margin-bottom:4px;">Detalle de las partidas</h3>
           ${det && det.partidas ? `
@@ -1706,6 +1731,32 @@ async function unlockDetalle(){
   await loadPanelDetalle();
   render();
 }
+function enlaceAyuda(x){
+  const base = (CONFIG.BASE_URL || (location.origin+location.pathname)).split('?')[0].split('#')[0];
+  return base + '?ayuda=' + encodeURIComponent(x.codigo) + '#n=' + encodeURIComponent(x.organizador||'') + '&p=' + encodeURIComponent(x.organizadorPin||'');
+}
+async function copiarEnlaceAyuda(code, btn){
+  const x = state._detalle && state._detalle.partidas.find(p=>p.codigo===code);
+  if(!x) return;
+  const url = enlaceAyuda(x);
+  try{ await navigator.clipboard.writeText(url); if(btn){ const t=btn.textContent; btn.textContent='¡Copiado!'; setTimeout(()=>{ btn.textContent=t; },1800); } }
+  catch(e){ window.prompt('Copia este enlace:', url); }
+}
+// Entrar como organizador desde un enlace de ayuda a distancia. Solo LEE la partida (misma comprobación que "Recuperar acceso");
+// no guarda la sesión en este dispositivo para no pisar ninguna otra partida que tenga abierta.
+async function ayudaDistancia(code, nombre, pin){
+  const result = await callAction('recover', { code, nombre, pin });
+  if(!result.ok || !result.esAdmin){
+    state.error = result.error==='red' ? 'No se ha podido conectar. Comprueba tu conexión e inténtalo de nuevo.' : 'El enlace de ayuda no es válido o la partida ya no existe.';
+    state.screen = 'home'; render(); return;
+  }
+  state.code = code; state.role = 'admin'; state.myPlayerId = null;
+  state._game = result.data; state.lastReassignSeen = result.data.ultimaReasignacion || null;
+  const pantalla = await screenForGameState(result.data, 'admin', null);
+  state.screen = pantalla || 'lobby';
+  if(state.screen!=='ranking') startPolling();
+  render(); ensurePhotos(result.data);
+}
 function togglePartida(code){
   state._abierta = state._abierta===code ? null : code;
   render();
@@ -1770,6 +1821,15 @@ async function screenForGameState(g, role, myPlayerId){
     await loadPanelStats();
     await loadPanelDetalle();
     render();
+    return;
+  }
+
+  if(params.get('ayuda')){
+    const hp = new URLSearchParams((location.hash||'').replace(/^#/,''));
+    const aCode = params.get('ayuda').toUpperCase(), aNombre = hp.get('n')||'', aPin = hp.get('p')||'';
+    try{ history.replaceState(null,'',location.pathname); }catch(e){} // quita el PIN de la barra de direcciones
+    render();
+    await ayudaDistancia(aCode, aNombre, aPin);
     return;
   }
 
