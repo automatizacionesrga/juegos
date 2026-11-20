@@ -566,7 +566,7 @@ function checkNuevasSolicitudes(g){
 
 async function pollTick(){
   if(!state.code) return;
-  if(state.screen==='join' || state.screen==='tutorial' || state.screen==='created' || state.showKillModal) return; // no interrumpir mientras el usuario está escribiendo, leyendo el tutorial, o viendo el código para compartir
+  if(state.screen==='join' || state.screen==='tutorial' || state.screen==='created' || state.showKillModal || state.showAccionesModal) return; // no interrumpir mientras el usuario está escribiendo, leyendo el tutorial, o viendo el código para compartir
   const g = await loadGame(state.code);
   if(!g) return;
   state._game = g;
@@ -815,6 +815,69 @@ async function actionSolicitarCambio(){
   render();
 }
 
+function accionesAbrir(){
+  state._accDraft = ((state._game && state._game.accionesOrganizador) || []).slice();
+  state._accError = null; state.showAccionesModal = true; render();
+}
+function accionesCerrar(){ state.showAccionesModal = false; state._accError = null; render(); }
+function accionesAnadir(){
+  const el = document.getElementById('acc-nueva');
+  const v = (el ? el.value : '').trim().slice(0,120);
+  if(!v) return;
+  if(state._accDraft.includes(v)){ state._accError = 'Esa acción ya está en la lista.'; render(); return; }
+  if(state._accDraft.length>=60){ state._accError = 'Máximo 60 acciones.'; render(); return; }
+  state._accDraft.push(v); state._accError = null; render();
+  setTimeout(()=>{ const n=document.getElementById('acc-nueva'); if(n) n.focus(); },30);
+}
+function accionesBorrar(i){ state._accDraft.splice(i,1); state._accError = null; render(); }
+function accionesImportar(){
+  const g = state._game; if(!g) return;
+  (g.jugadores||[]).forEach(j=>{
+    const a = (j.accion||'').trim().slice(0,120);
+    if(a && !state._accDraft.includes(a) && state._accDraft.length<60) state._accDraft.push(a);
+  });
+  state._accError = null; render();
+}
+async function accionesGuardar(){
+  const lista = state._accDraft.map(a=>(a||'').trim().slice(0,120)).filter((a,i,arr)=>a && arr.indexOf(a)===i).slice(0,60);
+  state._accGuardando = true; render();
+  const result = await callAction('setAcciones', { code: state.code, acciones: lista });
+  state._accGuardando = false;
+  if(!result.ok){ state._accError = 'No se ha podido guardar. Comprueba tu conexión e inténtalo de nuevo.'; render(); return; }
+  state._game = result.data; state.showAccionesModal = false; state._accError = null; render();
+}
+function accionesModalHtml(g){
+  const draft = state._accDraft || [];
+  const props = (g.jugadores||[]).filter(j=>(j.accion||'').trim());
+  const faltan = props.filter(j=>!draft.includes((j.accion||'').trim().slice(0,120))).length;
+  return `
+    <div class="modal-bg">
+      <div class="modal" style="max-height:88vh; overflow:auto;">
+        <h3 style="margin-bottom:6px;">Acciones de reserva</h3>
+        <p class="hint" style="margin-bottom:10px;">${draft.length
+          ? 'Cuando apruebes un cambio de misión, la nueva acción saldrá al azar de esta lista.'
+          : 'Ahora tu lista está vacía: los cambios salen de las acciones que propusieron los jugadores. Si añades alguna aquí, los cambios saldrán solo de tu lista.'}
+          No cambia las acciones que ya tienen los jugadores.</p>
+        ${draft.map((a,i)=>`
+          <div style="display:flex; gap:6px; margin-bottom:6px;">
+            <input type="text" maxlength="120" value="${esc(a)}" oninput="state._accDraft[${i}]=this.value" style="flex:1; margin:0;">
+            <button class="btn btn-outline" style="flex:none; width:auto; padding:8px 12px;" onclick="accionesBorrar(${i})" aria-label="Borrar">✕</button>
+          </div>`).join('') || '<p class="hint" style="margin:6px 0;">Sin acciones propias todavía.</p>'}
+        <div style="display:flex; gap:6px; margin:10px 0;">
+          <input type="text" id="acc-nueva" maxlength="120" placeholder="Nueva acción…" onkeydown="if(event.key==='Enter'){ event.preventDefault(); accionesAnadir(); }" style="flex:1; margin:0;">
+          <button class="btn btn-gold" style="flex:none; width:auto; padding:8px 14px;" onclick="accionesAnadir()">Añadir</button>
+        </div>
+        ${state._accError? `<div class="err">${esc(state._accError)}</div>`:''}
+        <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--border);">
+          <p class="hint" style="margin-bottom:6px;"><strong>Propuestas de los jugadores</strong> (${props.length})</p>
+          ${props.length? props.map(j=>`<div class="hint" style="margin:2px 0;">· ${esc(j.accion)} <span style="opacity:.6;">— ${esc(j.nombre)}</span></div>`).join('') : '<p class="hint">Nadie ha propuesto ninguna.</p>'}
+          ${faltan? `<button class="btn btn-outline" style="margin-top:8px;" onclick="accionesImportar()">Añadir a mi lista las que faltan (${faltan})</button>`:''}
+        </div>
+        <button class="btn btn-gold" style="margin-top:14px;" ${state._accGuardando?'disabled':''} onclick="accionesGuardar()">${state._accGuardando?'Guardando…':'Guardar cambios'}</button>
+        <button class="btn btn-outline" style="margin-top:8px;" onclick="accionesCerrar()">Cancelar</button>
+      </div>
+    </div>`;
+}
 async function actionResolverCambio(jugadorId, aprobar){
   const result = await callAction('resolverCambio', { code: state.code, jugadorId, aprobar });
   if(result.ok){ state._game = result.data; render(); }
@@ -1199,6 +1262,7 @@ function render(){
         ${state.showMyPin? `<div class="code-box" style="font-size:1.8rem; margin-top:12px;">${esc(me.pin)}</div>` : `<button class="btn btn-outline" onclick="revealMyPin()">¿Olvidaste tu PIN?</button>`}
       </div>
       <div class="footer-nav">
+        ${me.esAdmin ? `<a onclick="accionesAbrir()">Acciones de reserva</a> · ` : ''}
         ${me.esAdmin ? `<a onclick="state.showSolicitudesModal=true; render();">Solicitudes de cambio${(g.solicitudesCambio||[]).filter(s=>s.estado==='pendiente').length? ' ('+(g.solicitudesCambio||[]).filter(s=>s.estado==='pendiente').length+')':''}</a> · ` : ''}
         <a onclick="goHome()">Salir</a>
       </div>
@@ -1220,6 +1284,7 @@ function render(){
           </div>
         </div>`;
     }
+    if(state.showAccionesModal && me.esAdmin) html += accionesModalHtml(g);
     if(state.showKillModal){
       html += `
         <div class="modal-bg">
@@ -1307,6 +1372,13 @@ function render(){
         })()}
       </div>
       <div class="card">
+        <h3 style="margin-bottom:6px;">Acciones de reserva</h3>
+        <p class="hint" style="margin-bottom:10px;">${(g.accionesOrganizador||[]).length
+          ? 'Tu lista tiene '+(g.accionesOrganizador||[]).length+' acciones. De ahí salen los cambios de misión.'
+          : 'Tu lista está vacía: los cambios salen de las acciones propuestas por los jugadores.'}</p>
+        <button class="btn btn-outline" onclick="accionesAbrir()">Ver, editar o añadir acciones</button>
+      </div>
+      <div class="card">
         <h3 style="margin-bottom:10px;">Jugadores</h3>
         <div class="counter" style="margin:6px 0 0;"><div class="sub" style="font-size:1.3rem;"><strong style="color:var(--gold);">${vivos.length}</strong> de ${g.jugadores.length} siguen en pie</div></div>
         <div class="spectator-grid">
@@ -1320,6 +1392,7 @@ function render(){
         </div>
       </div>
       <div class="footer-nav"><a onclick="goHome()">Salir</a></div>`;
+    if(state.showAccionesModal) html += accionesModalHtml(g);
   }
 
   else if(state.screen==='spectator'){
