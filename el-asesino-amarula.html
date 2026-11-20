@@ -1735,6 +1735,31 @@ function estadoPartidaTexto(x){
   return x.viva? 'Esperando jugadores' : 'Abandonada (sin iniciar)';
 }
 
+function rankingNav(delta){
+  state.rankingSlide = Math.max(0, Math.min(3, (state.rankingSlide||0)+delta));
+  render();
+}
+
+function renderCreateConfig(){ state.screen='create-config'; state.cfgParticipa=undefined; state.cfgModoEspectador=undefined; state.cfgVisibilidad=undefined; render(); }
+function actionOpenSpectatorFromInside(){
+  state.role='spectator'; state.screen='spectator'; state.myPlayerId=null; render();
+}
+
+async function screenForGameState(g, role, myPlayerId){
+  if(role==='spectator') return g.estado==='finalizada' ? 'ranking' : 'spectator';
+  if(g.estado==='finalizada') return 'ranking';
+  if(role==='player'){
+    const me = g.jugadores.find(j=>j.id===myPlayerId);
+    if(!me) return null;
+    if(me.estado==='muerto') return 'dead';
+    return g.estado==='en_curso' ? 'game' : 'lobby';
+  }
+  if(role==='admin'){
+    return g.estado==='en_curso' ? 'admin-panel' : 'lobby';
+  }
+  return null;
+}
+
 (async function init(){
   const params = new URLSearchParams(location.search);
 
