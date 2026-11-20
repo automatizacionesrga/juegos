@@ -296,6 +296,20 @@
   .fun-split{ display:grid; gap:10px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border); font-size:.95rem; }
   .fun-split strong{ color:var(--gold); }
   .fun-split .hint-inline{ display:block; font-size:.8rem; color:var(--text-dim); margin-top:2px; }
+  .part{ border:1px solid var(--border); border-radius:12px; margin-bottom:8px; background:rgba(255,255,255,.03); }
+  .part-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:11px 12px; cursor:pointer; }
+  .part-org{ font-weight:600; color:var(--text); }
+  .part-sub{ font-size:.78rem; color:var(--text-dim); margin-top:2px; }
+  .part-head .tag-pill{ white-space:nowrap; flex:0 0 auto; }
+  .part.open{ border-color:var(--gold-dim); }
+  .part-body{ padding:0 12px 12px; }
+  .part-facts{ display:grid; grid-template-columns:1fr 1fr; gap:8px 12px; font-size:.85rem; padding:10px 0; border-top:1px solid var(--border); }
+  .part-facts span{ display:block; font-size:.7rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); }
+  .part-players{ display:grid; grid-template-columns:repeat(auto-fill,minmax(76px,1fr)); gap:10px; }
+  .part-player{ text-align:center; font-size:.78rem; line-height:1.2; }
+  .part-player img{ width:56px; height:56px; border-radius:50%; object-fit:cover; display:block; margin:0 auto 4px; border:1px solid var(--gold-dim); }
+  .part-player.dead img{ filter:grayscale(1); opacity:.55; }
+  .part-player.dead div{ opacity:.6; text-decoration:line-through; }
   .tbl-wrap{ overflow-x:auto; margin-top:12px; }
   .tbl{ width:100%; border-collapse:collapse; font-size:.85rem; min-width:620px; }
   .tbl th{ text-align:left; color:var(--gold); font-weight:600; padding:8px 8px; border-bottom:1px solid var(--border); white-space:nowrap; }
@@ -1398,30 +1412,47 @@ function render(){
           ${tipos.map(t=>`<div class="ranking-row"><div class="rn">${esc(t)}</div><div class="rv">${s.tiposEvento[t]}</div></div>`).join('')}
         </div>` : ''}
 
-        <details class="card" style="margin-top:14px;" ${state._detOpen?'open':''} ontoggle="state._detOpen=this.open">
-          <summary style="cursor:pointer; font-weight:600; color:var(--gold);">Detalle de las partidas</summary>
+        <div class="card" style="margin-top:14px;">
+          <h3 style="margin-bottom:4px;">Detalle de las partidas</h3>
           ${det && det.partidas ? `
-            <div class="tbl-wrap"><table class="tbl">
-              <thead><tr><th>Código</th><th>Organizador</th><th>Creada</th><th>Última actividad</th><th>Estado</th><th>Jugadores</th><th>Duración</th></tr></thead>
-              <tbody>${det.partidas.length? det.partidas.map(x=>`<tr>
-                <td>${esc(x.codigo)}</td>
-                <td>${esc(x.organizador||'—')}</td>
-                <td>${fmtFechaHora(x.creadaEn)}</td>
-                <td>${fmtFechaHora(x.ultimaActividad)}</td>
-                <td><span class="tag-pill">${estadoPartidaTexto(x)}</span></td>
-                <td>${x.jugadores}${x.estado!=='sin_iniciar'? ' ('+x.vivos+' vivos)':''}</td>
-                <td>${x.iniciadaEn && x.finalizadaEn? Math.round((x.finalizadaEn-x.iniciadaEn)/60000)+' min' : '—'}</td>
-              </tr>`).join('') : '<tr><td colspan="7">Aún no hay partidas.</td></tr>'}</tbody>
-            </table></div>
+            <p class="hint" style="margin:0 0 10px;">Toca una partida para ver sus datos y participantes.</p>
+            ${det.partidas.length? det.partidas.map(x=>{
+              const abierta = state._abierta===x.codigo;
+              const dur = x.iniciadaEn && x.finalizadaEn? Math.round((x.finalizadaEn-x.iniciadaEn)/60000)+' min' : '—';
+              return `<div class="part ${abierta?'open':''}">
+                <div class="part-head" onclick="togglePartida('${esc(x.codigo)}')">
+                  <div>
+                    <div class="part-org">${esc(x.organizador||'Sin nombre')}</div>
+                    <div class="part-sub">${x.creadaEn? 'Creada '+fmtFechaHora(x.creadaEn) : 'Sin fecha de creación'} · ${esc(x.codigo)}</div>
+                  </div>
+                  <span class="tag-pill">${estadoPartidaTexto(x)}</span>
+                </div>
+                ${abierta? `<div class="part-body">
+                  <div class="part-facts">
+                    <div><span>Iniciada</span>${fmtFechaHora(x.iniciadaEn)}</div>
+                    <div><span>Terminada</span>${fmtFechaHora(x.finalizadaEn)}</div>
+                    <div><span>Duración</span>${dur}</div>
+                    <div><span>Última actividad</span>${fmtFechaHora(x.ultimaActividad)}</div>
+                    <div><span>Jugadores</span>${x.jugadores}${x.estado!=='sin_iniciar'? ' ('+x.vivos+' en pie)':''}</div>
+                    <div><span>Aperturas del formulario</span>${x.aperturas}</div>
+                  </div>
+                  ${(x.jugadoresLista||[]).length? `<div class="part-players">${x.jugadoresLista.map(j=>`
+                    <div class="part-player ${j.estado==='muerto'?'dead':''}">
+                      <img src="${avatarSrc(photoOf(j.id))}" alt="">
+                      <div>${esc(j.nombre)}</div>
+                    </div>`).join('')}</div>` : '<p class="hint">Todavía no hay jugadores apuntados.</p>'}
+                </div>`:''}
+              </div>`;
+            }).join('') : '<p class="hint">Aún no hay partidas.</p>'}
             <p class="hint" style="margin-top:8px;">Las partidas creadas antes de esta versión no tienen fecha de creación.</p>`
           : `
-            <div style="margin-top:12px;">
-              <p class="hint">Introduce el código del panel para ver nombres de organizadores y fechas.</p>
+            <div style="margin-top:8px;">
+              <p class="hint">Introduce el código del panel (solo la primera vez en este dispositivo) para ver organizadores, fechas y participantes.</p>
               <input type="password" id="panel-pin" placeholder="Código del panel" value="${esc(state._panelPin||'')}" style="margin-top:8px;">
               ${state._detError? `<p class="hint" style="color:var(--blood-bright,#e05a5a);">${state._detError}</p>`:''}
               <button class="btn btn-gold" style="margin-top:8px;" onclick="unlockDetalle()">Ver detalle</button>
             </div>`}
-        </details>
+        </div>
         <div class="footer-nav"><a onclick="loadPanelStats().then(()=>loadPanelDetalle()).then(render)">Actualizar</a></div>`;
     }
   }
@@ -1663,7 +1694,7 @@ async function loadPanelDetalle(){
     const res = await fetch(url);
     const d = await res.json();
     if(d && d.partidas){ state._detalle = d; state._detError = null; }
-    else { state._detalle = null; state._detError = 'Código incorrecto.'; state._panelPin = null; try{ sessionStorage.removeItem('amaruler-panel-pin'); }catch(e){} }
+    else { state._detalle = null; state._detError = 'Código incorrecto.'; state._panelPin = null; try{ localStorage.removeItem('amaruler-panel-pin'); }catch(e){} }
   }catch(e){ state._detalle = null; state._detError = 'No se ha podido conectar.'; }
 }
 async function unlockDetalle(){
@@ -1671,9 +1702,26 @@ async function unlockDetalle(){
   state._panelPin = el ? el.value.trim() : '';
   state._detOpen = true;
   if(!state._panelPin){ state._detError='Escribe el código.'; render(); return; }
-  try{ sessionStorage.setItem('amaruler-panel-pin', state._panelPin); }catch(e){}
+  try{ localStorage.setItem('amaruler-panel-pin', state._panelPin); }catch(e){}
   await loadPanelDetalle();
   render();
+}
+function togglePartida(code){
+  state._abierta = state._abierta===code ? null : code;
+  render();
+  if(state._abierta) loadPanelFotos(code);
+}
+async function loadPanelFotos(code){
+  const p = state._detalle && state._detalle.partidas.find(x=>x.codigo===code);
+  if(!p) return;
+  state.photoCache = state.photoCache || {};
+  const missing = (p.jugadoresLista||[]).map(j=>j.id).filter(id=>!(id in state.photoCache));
+  if(!missing.length) return;
+  try{
+    const url = `${CONFIG.APPS_SCRIPT_URL}?action=fotos&ids=${encodeURIComponent(missing.join(','))}&key=${encodeURIComponent(CONFIG.SECRET_KEY)}`;
+    const json = await (await fetch(url)).json();
+    if(json.fotos){ missing.forEach(id=>{ state.photoCache[id] = json.fotos[id] || null; }); render(); }
+  }catch(e){ console.error(e); }
 }
 function fmtFechaHora(ms){
   if(!ms) return '—';
@@ -1692,7 +1740,7 @@ function estadoPartidaTexto(x){
 
   if(params.get('panel')==='1'){
     state.screen = 'panel';
-    try{ state._panelPin = sessionStorage.getItem('amaruler-panel-pin') || null; }catch(e){}
+    try{ state._panelPin = localStorage.getItem('amaruler-panel-pin') || null; }catch(e){}
     render();
     await loadPanelStats();
     await loadPanelDetalle();
@@ -1758,6 +1806,7 @@ function estadoPartidaTexto(x){
         state.code = session.code; state.role = session.role; state.myPlayerId = session.myPlayerId;
         state._game = g; state.lastReassignSeen = g.ultimaReasignacion || null; state.screen = pantalla;
         if(pantalla!=='ranking') startPolling();
+        if(g.estado!=='finalizada') callAction('ping', { code: session.code }); // cuenta como actividad de la partida
         render(); ensurePhotos(g);
         return;
       }
