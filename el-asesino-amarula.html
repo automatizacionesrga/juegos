@@ -1600,13 +1600,27 @@ function render(){
         <div class="card" style="margin-top:14px;">
           <h3 style="margin-bottom:4px;">Detalle de las partidas</h3>
           ${det && det.partidas ? `
-            <p class="hint" style="margin:0 0 10px;">Toca una partida para ver sus datos y participantes.</p>
+            <p class="hint" style="margin:0 0 10px;">Toca una partida para ver sus datos y participantes. Marca la casilla de las que quieras eliminar (por ejemplo, intentos que no llegaron a empezar) para que no cuenten en las estadísticas.</p>
+            ${(()=>{
+              const nSel = Object.keys(state._sel||{}).filter(c=>det.partidas.some(x=>x.codigo===c)).length;
+              const nSin = det.partidas.filter(x=>x.estado==='sin_iniciar').length;
+              return `
+              ${state._delMsg? `<p class="hint" style="color:var(--gold); margin:0 0 8px;">${esc(state._delMsg)}</p>`:''}
+              <div style="display:flex; gap:14px; flex-wrap:wrap; margin:0 0 10px;">
+                ${nSin? `<a onclick="selSinIniciar()" style="color:var(--gold); text-decoration:underline; cursor:pointer; font-size:.85rem;">Marcar las ${nSin} «esperando jugadores»</a>`:''}
+                ${nSel? `<a onclick="selNinguna()" style="color:var(--text-dim); text-decoration:underline; cursor:pointer; font-size:.85rem;">Quitar marcas</a>`:''}
+              </div>
+              ${nSel? `<div style="position:sticky; top:0; z-index:5; padding:8px 0; background:#1a0f1c;">
+                <button class="btn btn-gold" ${state._delBusy?'disabled':''} onclick="eliminarPartidas(Object.keys(state._sel))">${state._delBusy?'Eliminando…':'Eliminar '+nSel+' partida'+(nSel>1?'s':'')+' marcada'+(nSel>1?'s':'')}</button>
+              </div>`:''}`;
+            })()}
             ${det.partidas.length? det.partidas.map(x=>{
               const abierta = state._abierta===x.codigo;
               const dur = x.iniciadaEn && x.finalizadaEn? Math.round((x.finalizadaEn-x.iniciadaEn)/60000)+' min' : '—';
               return `<div class="part ${abierta?'open':''}">
                 <div class="part-head" onclick="togglePartida('${esc(x.codigo)}')">
-                  <div>
+                  <input type="checkbox" aria-label="Marcar para eliminar" ${(state._sel||{})[x.codigo]?'checked':''} onclick="togglSel('${esc(x.codigo)}', event)" style="width:22px; height:22px; padding:0; margin:0; flex:none; accent-color:var(--gold); cursor:pointer;">
+                  <div style="flex:1; min-width:0;">
                     <div class="part-org">${esc(x.organizador||'Sin nombre')}</div>
                     <div class="part-sub">${x.creadaEn? 'Creada '+fmtFechaHora(x.creadaEn) : 'Sin fecha de creación'} · ${esc(x.codigo)}</div>
                   </div>
@@ -1621,6 +1635,7 @@ function render(){
                     <div><span>Jugadores</span>${x.jugadores}${x.estado!=='sin_iniciar'? ' ('+x.vivos+' en pie)':''}</div>
                     <div><span>Aperturas del formulario</span>${x.aperturas}</div>
                   </div>
+                  <div style="margin:6px 0 10px;"><button class="btn btn-outline" style="width:auto; padding:8px 14px; font-size:.85rem;" onclick="eliminarPartidas(['${esc(x.codigo)}'])">Eliminar esta partida</button></div>
                   ${(x.jugadoresLista||[]).length? `<div class="part-players">${x.jugadoresLista.map(j=>`
                     <div class="part-player ${j.estado==='muerto'?'dead':''}">
                       <img src="${avatarSrc(photoOf(j.id))}" alt="">
@@ -1916,6 +1931,40 @@ async function ayudaDistancia(code, nombre, pin){
   state.screen = pantalla || 'lobby';
   if(state.screen!=='ranking') startPolling();
   render(); ensurePhotos(result.data);
+}
+function togglSel(code, ev){
+  if(ev) ev.stopPropagation();
+  state._sel = state._sel || {};
+  if(state._sel[code]) delete state._sel[code]; else state._sel[code] = true;
+  state._delMsg = null; render();
+}
+function selSinIniciar(){
+  state._sel = {}; state._delMsg = null;
+  ((state._detalle && state._detalle.partidas) || []).filter(x=>x.estado==='sin_iniciar').forEach(x=>{ state._sel[x.codigo] = true; });
+  render();
+}
+function selNinguna(){ state._sel = {}; state._delMsg = null; render(); }
+async function eliminarPartidas(codigos){
+  const det = state._detalle; if(!det || !codigos || !codigos.length || state._delBusy) return;
+  const ps = codigos.map(c=>det.partidas.find(x=>x.codigo===c)).filter(Boolean);
+  if(!ps.length) return;
+  const lineas = ps.map(x=>'• '+(x.organizador||'Sin nombre')+' · '+x.codigo+' · '+estadoPartidaTexto(x)+' · '+x.jugadores+' jugador(es)').join('\n');
+  const activas = ps.filter(x=>x.estado==='en_curso' && x.viva);
+  let msg = '¿Eliminar '+ps.length+' partida'+(ps.length>1?'s':'')+'?\n\n'+lineas+'\n\nDejarán de contar en las estadísticas y se borrarán las fotos de sus jugadores. Se guarda una copia de los datos (sin fotos) en la pestaña «Papelera» del Google Sheets.';
+  if(activas.length) msg += '\n\n⚠️ ATENCIÓN: '+activas.length+' de ellas está(n) EN CURSO con actividad en las últimas 24 h. Sus jugadores perderán la partida.';
+  if(!window.confirm(msg)) return;
+  state._delBusy = true; state._delMsg = null; render();
+  const r = await callAction('eliminarPartidas', { codigos: ps.map(x=>x.codigo), pin: state._panelPin });
+  state._delBusy = false;
+  if(!r.ok){
+    state._delMsg = r.error==='pin' ? 'Código del panel incorrecto.'
+      : r.error==='acción desconocida' ? 'El servidor aún no tiene la versión que permite eliminar. Hay que actualizar el Apps Script.'
+      : 'No se ha podido eliminar. Comprueba la conexión e inténtalo de nuevo.';
+    render(); return;
+  }
+  state._sel = {}; state._abierta = null;
+  state._delMsg = 'Eliminadas: '+ps.length+'. Ya no cuentan en las estadísticas.';
+  await loadPanelStats(); await loadPanelDetalle(); render();
 }
 function togglePartida(code){
   state._abierta = state._abierta===code ? null : code;
