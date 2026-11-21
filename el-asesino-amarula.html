@@ -111,6 +111,14 @@
     justify-content:center; z-index:50; padding:20px;
   }
   .modal{ background:var(--panel); border:1px solid var(--gold-dim); border-radius:8px; padding:24px; max-width:340px; width:100%;}
+  .modal.wide{ max-width:760px; }
+  .opt{ display:flex; gap:12px; align-items:flex-start; width:100%; text-align:left; padding:12px 14px; margin:8px 0; background:transparent; color:var(--text); border:1px solid var(--border); border-radius:8px; cursor:pointer; font:inherit; }
+  .opt .mark{ flex:none; width:22px; height:22px; border-radius:50%; border:2px solid var(--border); margin-top:2px; display:flex; align-items:center; justify-content:center; font-size:0.8rem; color:#1a0f1c; }
+  .opt .t{ display:block; font-weight:600; }
+  .opt .d{ display:block; font-size:0.82rem; color:var(--text-dim); margin-top:2px; line-height:1.35; }
+  .opt.sel{ border-color:var(--gold); box-shadow:inset 0 0 0 1px var(--gold); background:rgba(210,164,101,.12); }
+  .opt.sel .mark{ background:var(--gold); border-color:var(--gold); }
+  .opt:disabled{ opacity:.6; cursor:wait; }
   .ranking-row{ display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border);}
   .ranking-row img{ width:42px; height:42px; border-radius:50%; object-fit:cover;}
   .ranking-row .rn{ flex:1;}
@@ -703,12 +711,12 @@ function limpiaAccion(t){
 function avisoAccion(s){
   const p = (s.split(' ')[0]||'').toLowerCase();
   if(/^[a-záéíóúñü]+(ar|er|ir)(se|me|te|lo|la|le|nos)?$/.test(p))
-    return 'Parece que empiezas con un verbo en infinitivo («'+p+'…»). La frase es «Matarás a tu objetivo si consigues que…», así que escribe el verbo conjugado: «te friegue un vaso», «baile la Macarena», «se haga una foto contigo».';
+    return 'Parece que empiezas con un verbo en infinitivo («'+p+'…»). La frase es «Matarás a tu objetivo si consigues que…», así que escribe el verbo conjugado: «friegue un vaso», «baile la Macarena», «hable con acento italiano».';
   if(/(^|[\s,¿])(me|mi|mis|conmigo)(?=[\s,?!.]|$)/i.test(s))
-    return 'Quien reciba tu acción será quien tenga que conseguirla, así que háblale a él/ella: usa «te» o «contigo», no «me», «mi» ni «conmigo». Ej: «te ayude con la maleta».';
+    return 'Tu acción la leerá otra persona, así que evita «me», «mi» y «conmigo». Para hablar de quien la use, di «te» o «contigo» (o no lo menciones). Ej: «te ayude con la maleta», «se bañe en la piscina».';
   const pn = p.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   if(/^(pon|da|di|trae|haz|pasa|sirve|deja|ayuda|acerca|ensena|cuenta|presta|compra|invita|abre|lleva|sujeta|coge)(me|nos)$/.test(pn))
-    return 'Eso suena a algo que dice quien escribe («'+p+'…»). Describe lo que hace tu objetivo para ti: «te ponga una copa», «te sujete el vaso».';
+    return 'Eso suena a algo que dice quien escribe («'+p+'…»). Describe lo que tiene que hacer tu objetivo: «te ponga una copa», «se tome un chupito».';
   if(/^(un|una|unos|unas|el|la|los|las)$/.test(p))
     return 'Falta el verbo: la frase es «Matarás a tu objetivo si consigues que…». Ej: «te dé un pico», «te haga un masaje en la espalda».';
   if(/\?/.test(s))
@@ -865,8 +873,10 @@ function accionesAbrir(){
     state._accPrecargada = lista.length>0;
   }
   state._accDraft = lista;
-  state._accError = null; state.showAccionesModal = true; render();
+  state._accError = null; state.showAccionesModal = true; render(); accionesAutoGrow();
 }
+function accionesAutoGrow(){ setTimeout(()=>document.querySelectorAll('.acc-ta').forEach(t=>{ t.style.height='auto'; t.style.height=(t.scrollHeight+2)+'px'; }),0); }
+window.addEventListener('resize', accionesAutoGrow);
 function accionesCerrar(){ state.showAccionesModal = false; state._accError = null; render(); }
 function accionesAnadir(){
   const el = document.getElementById('acc-nueva');
@@ -874,17 +884,17 @@ function accionesAnadir(){
   if(!v) return;
   if(state._accDraft.includes(v)){ state._accError = 'Esa acción ya está en la lista.'; render(); return; }
   if(state._accDraft.length>=60){ state._accError = 'Máximo 60 acciones.'; render(); return; }
-  state._accDraft.push(v); state._accError = null; render();
+  state._accDraft.push(v); state._accError = null; render(); accionesAutoGrow();
   setTimeout(()=>{ const n=document.getElementById('acc-nueva'); if(n) n.focus(); },30);
 }
-function accionesBorrar(i){ state._accDraft.splice(i,1); state._accError = null; render(); }
+function accionesBorrar(i){ state._accDraft.splice(i,1); state._accError = null; render(); accionesAutoGrow(); }
 function accionesImportar(){
   const g = state._game; if(!g) return;
   (g.jugadores||[]).forEach(j=>{
     const a = (j.accion||'').trim().slice(0,120);
     if(a && !state._accDraft.includes(a) && state._accDraft.length<60) state._accDraft.push(a);
   });
-  state._accError = null; render();
+  state._accError = null; render(); accionesAutoGrow();
 }
 async function accionesGuardar(){
   const lista = state._accDraft.map(a=>limpiaAccion(a)).filter((a,i,arr)=>a && arr.indexOf(a)===i).slice(0,60);
@@ -900,18 +910,19 @@ function accionesModalHtml(g){
   const faltan = props.filter(j=>!draft.includes((j.accion||'').trim().slice(0,120))).length;
   return `
     <div class="modal-bg">
-      <div class="modal" style="max-height:88vh; overflow:auto;">
+      <div class="modal wide" style="max-height:90vh; overflow:auto;">
         <h3 style="margin-bottom:6px;">Acciones de reserva</h3>
         <p class="hint" style="margin-bottom:10px;">Cuando apruebes un cambio de misión, la nueva acción saldrá al azar de esta lista. No cambia las acciones que ya tienen los jugadores.</p>
-        <p class="hint" style="margin-bottom:10px;">Cada acción debe continuar la frase <strong>«Matarás a tu objetivo si consigues que…»</strong>, con «te» o «contigo» para quien la use. Ej: <em>te cuente un secreto</em>, <em>se haga una foto contigo</em>.</p>
+        <p class="hint" style="margin-bottom:10px;">Cada acción debe continuar la frase <strong>«Matarás a tu objetivo si consigues que…»</strong>, en tercera persona. Ej: <em>baile la Macarena</em>, <em>hable con acento italiano</em>, <em>se bañe en la piscina</em>, <em>te cuente un secreto</em>.</p>
         <p class="hint" style="margin-bottom:10px;"><strong>Cómo se usa:</strong> escribe sobre una acción para cambiarla, pulsa ✕ para borrarla, o escribe abajo una nueva y pulsa «Añadir». Al terminar, pulsa «Guardar cambios».${state._accPrecargada?' <em>Hemos cargado aquí las acciones que propusieron los jugadores para que puedas editarlas.</em>':''}</p>
+        <p class="hint" style="margin:4px 0 6px;"><strong>Tu lista (${draft.length})</strong></p>
         ${draft.map((a,i)=>`
-          <div style="display:flex; gap:6px; margin-bottom:6px;">
-            <input type="text" maxlength="120" value="${esc(a)}" oninput="state._accDraft[${i}]=this.value" style="flex:1; margin:0;">
+          <div style="display:flex; gap:6px; margin-bottom:6px; align-items:flex-start;">
+            <textarea class="acc-ta" rows="1" maxlength="120" oninput="state._accDraft[${i}]=this.value; this.style.height='auto'; this.style.height=(this.scrollHeight+2)+'px';" onkeydown="if(event.key==='Enter'){ event.preventDefault(); }" style="flex:1; margin:0; resize:none; overflow:hidden; min-height:46px;">${esc(a)}</textarea>
             <button class="btn btn-outline" style="flex:none; width:auto; padding:8px 12px;" onclick="accionesBorrar(${i})" aria-label="Borrar">✕</button>
           </div>`).join('') || '<p class="hint" style="margin:6px 0;">Sin acciones propias todavía.</p>'}
         <div style="display:flex; gap:6px; margin:10px 0;">
-          <input type="text" id="acc-nueva" maxlength="120" placeholder="te cuente un secreto…" onkeydown="if(event.key==='Enter'){ event.preventDefault(); accionesAnadir(); }" style="flex:1; margin:0;">
+          <input type="text" id="acc-nueva" maxlength="120" placeholder="hable con acento italiano" onkeydown="if(event.key==='Enter'){ event.preventDefault(); accionesAnadir(); }" style="flex:1; margin:0;">
           <button class="btn btn-gold" style="flex:none; width:auto; padding:8px 14px;" onclick="accionesAnadir()">Añadir</button>
         </div>
         ${state._accError? `<div class="err">${esc(state._accError)}</div>`:''}
@@ -919,8 +930,12 @@ function accionesModalHtml(g){
           <p class="hint" style="margin-bottom:6px;">Hay ${faltan} acción(es) propuesta(s) por jugadores que no están en tu lista.</p>
           <button class="btn btn-outline" onclick="accionesImportar()">Añadir a la lista las propuestas de jugadores que faltan (${faltan})</button>
         </div>`:''}
-        <button class="btn btn-gold" style="margin-top:14px;" ${state._accGuardando?'disabled':''} onclick="accionesGuardar()">${state._accGuardando?'Guardando…':'Guardar cambios'}</button>
-        <button class="btn btn-outline" style="margin-top:8px;" onclick="accionesCerrar()">Cancelar</button>
+        <div style="position:sticky; bottom:-24px; margin:14px -24px -24px; padding:12px 24px 24px; background:#2a1530; border-top:1px solid var(--border);">
+          <div class="row">
+            <button class="btn btn-outline" onclick="accionesCerrar()">Cancelar</button>
+            <button class="btn btn-gold" ${state._accGuardando?'disabled':''} onclick="accionesGuardar()">${state._accGuardando?'Guardando…':'Guardar cambios'}</button>
+          </div>
+        </div>
       </div>
     </div>`;
 }
@@ -929,6 +944,22 @@ async function actionResolverCambio(jugadorId, aprobar){
   if(result.ok){ state._game = result.data; render(); }
 }
 
+async function actionSetVisibilidad(modo){
+  if(state._savingOpt || state._game.modoVisibilidadObjetivo===modo) return;
+  state._savingOpt = true; render();
+  const result = await callAction('setVisibilidad', { code: state.code, modo });
+  state._savingOpt = false;
+  if(result.ok) state._game = result.data; else state.error='No se ha podido guardar el cambio. Revisa tu conexión.';
+  render();
+}
+async function actionSetEspectador(modo){
+  if(state._savingOpt || state._game.modoEspectador===modo) return;
+  state._savingOpt = true; render();
+  const result = await callAction('setmode', { code: state.code, modo });
+  state._savingOpt = false;
+  if(result.ok) state._game = result.data; else state.error='No se ha podido guardar el cambio. Revisa tu conexión.';
+  render();
+}
 async function actionToggleVisibilidad(){
   const nuevo = state._game.modoVisibilidadObjetivo==='oculto' ? 'visible' : 'oculto';
   const result = await callAction('setVisibilidad', { code: state.code, modo: nuevo });
@@ -1124,7 +1155,7 @@ function render(){
       </div>
       <div class="card">
         <p style="font-size:0.95rem;">¿Quieres añadir acciones propias de este evento? <span style="color:var(--text-dim); font-weight:400;">(opcional)</span></p>
-        <textarea id="cfg-acciones" placeholder="Una por línea, continuando «Matarás a tu objetivo si consigues que…». Ej:&#10;te cuente su destino favorito&#10;te haga una foto en la piscina&#10;brinde contigo" oninput="state.cfgAcciones=this.value">${esc(state.cfgAcciones||'')}</textarea>
+        <textarea id="cfg-acciones" placeholder="Una por línea, continuando «Matarás a tu objetivo si consigues que…». Ej:&#10;baile la Macarena&#10;hable con acento italiano&#10;se bañe en la piscina&#10;te cuente su destino favorito" oninput="state.cfgAcciones=this.value">${esc(state.cfgAcciones||'')}</textarea>
         <p class="hint">Se usan cuando un jugador pide cambiar su misión y tú lo apruebas. Cada una continúa la frase «Matarás a tu objetivo si consigues que…». Si lo dejas vacío, el cambio sale de las acciones que propusieron los jugadores.</p>
       </div>
       <div class="card">
@@ -1176,7 +1207,7 @@ function render(){
     const pasos = [
       { titulo:'¿CÓMO FUNCIONA?', texto:'Vas a recibir un objetivo: otra persona de la partida. Tu misión es conseguir que ESA PERSONA haga, sin sospechar, una acción secreta que tú le asignarás. Y lo importante de verdad: que habléis, os mováis y os conozcáis entre todos, incluso entre desconocidos. Da igual ganar o perder.' },
       { titulo:'CUANDO LO CONSIGUES', texto:'En cuanto tu objetivo hace la acción, queda eliminado. Heredas automáticamente a quién estaba cazando él y con qué acción — y sigues cazando. Al final solo queda un superviviente.' },
-      { titulo:'ELIGE BIEN TU ACCIÓN', texto:'Tu acción no volverá necesariamente a ti — se reparte al azar entre todos, y puede tocarle a cualquiera para usarla sobre cualquier objetivo. Por eso cuanto más realista y fácil de pedir sin levantar sospechas sea, más divertida será para todo el grupo. Escríbela siempre dirigida a quien la use, completando la frase «Matarás a tu objetivo si consigues que…» (ej: «te cuente su destino soñado», «se haga una foto contigo»).' }
+      { titulo:'ELIGE BIEN TU ACCIÓN', texto:'Tu acción no volverá necesariamente a ti — se reparte al azar entre todos, y puede tocarle a cualquiera para usarla sobre cualquier objetivo. Por eso cuanto más realista y fácil de pedir sin levantar sospechas sea, más divertida será para todo el grupo. Escríbela siempre dirigida a quien la use, completando la frase «Matarás a tu objetivo si consigues que…» (ej: «baile la Macarena», «hable con acento italiano», «te cuente su destino soñado»).' }
     ];
     const p = pasos[step];
     html = `
@@ -1211,9 +1242,9 @@ function render(){
         <input type="text" id="j-nombre" value="${esc(profile.nombre||'')}" placeholder="Nombre visible para los demás">
         <label>Tu acción para matar <span class="info-icon" onclick="toggleAccionHint()">ⓘ</span></label>
         <p style="margin:2px 0 6px; color:var(--gold); font-weight:600;">Matarás a tu objetivo si consigues que…</p>
-        <input type="text" id="j-accion" maxlength="120" placeholder="te cuente su destino soñado">
-        <p class="hint">Completa la frase con lo que tiene que hacer tu objetivo. «Te» eres tú, quien intenta matarlo: escribe «te cuente», «brinde contigo»… (nunca «me» ni «conmigo»).</p>
-        ${state.showAccionHint? `<p class="hint">✔ <em>te cuente su destino soñado</em> · <em>brinde contigo</em> · <em>se haga una foto contigo</em> · <em>te cuente un secreto</em> · <em>baile la Macarena</em><br>✘ «Fregar un vaso» (infinitivo) · «Ponme una copa» (habla el que escribe) · «Que me deje una camiseta» (me/conmigo)<br>Cuanto más fácil de pedir sin levantar sospechas y más divertida, ¡mejor será el juego!</p>` : ''}
+        <input type="text" id="j-accion" maxlength="120" placeholder="baile la Macarena">
+        <p class="hint">Escribe lo que tiene que hacer tu objetivo, con el verbo conjugado: «baile la Macarena», «hable con acento italiano», «se bañe en la piscina». Si tiene que ver con quien lo mata, usa «te» o «contigo»: «te cuente su destino soñado».</p>
+        ${state.showAccionHint? `<p class="hint">✔ <em>baile la Macarena</em> · <em>hable con acento italiano</em> · <em>se bañe en la piscina</em> · <em>te cuente un secreto</em> · <em>se haga una foto contigo</em><br>✘ «Fregar un vaso» (mejor: «friegue un vaso») · «Ponme una copa» (habla quien escribe) · «Que me deje una camiseta» (no uses me/mi/conmigo: la leerá otra persona)<br>Cuanto más fácil de pedir sin levantar sospechas y más divertida, ¡mejor será el juego!</p>` : ''}
         <label>Tu PIN secreto (4 números)</label>
         <input type="tel" id="j-pin" maxlength="4" placeholder="0000">
         <p class="hint">Dale este PIN solo a quien consiga matarte, en el momento en que lo logre.</p>
@@ -1392,16 +1423,24 @@ function render(){
         ${state.error? `<div class="err">${esc(state.error)}</div>`:''}
       </div>
       <div class="card">
-        <p class="hint">Marcador público para jugadores/proyector: <strong>${g.modoEspectador==='completo'?'Caras y nombres':g.modoEspectador==='nada'?'Desactivado':'Solo el contador'}</strong></p>
-        <button class="btn btn-outline" onclick="actionToggleEspectadorMode()">Cambiar modo</button>
+        <h3 style="margin-bottom:4px;">Marcador público</h3>
+        <p class="hint" style="margin-bottom:6px;">Lo que ven los jugadores o el proyector cuando abren el marcador. Toca una opción para elegirla.</p>
+        ${[['nada','Desactivado','El marcador no muestra nada.'],['anon','Solo el contador','Solo se ve cuántos siguen vivos, sin caras ni nombres.'],['completo','Caras y nombres','Se ve quién sigue vivo y quién ha caído, con foto y nombre.']].map(o=>`
+          <button class="opt ${(g.modoEspectador||'anon')===o[0]?'sel':''}" ${state._savingOpt?'disabled':''} onclick="actionSetEspectador('${o[0]}')">
+            <span class="mark">${(g.modoEspectador||'anon')===o[0]?'✓':''}</span><span><span class="t">${o[1]}</span><span class="d">${o[2]}</span></span>
+          </button>`).join('')}
         <div class="row">
           <button class="btn btn-outline" onclick="copyLink('${shareSpectatorUrlFor(state.code)}')">Copiar enlace del marcador</button>
         </div>
         <p class="hint">Ese enlace puedes abrirlo en un ordenador o proyectarlo en una pantalla para que todos vean cómo va la partida en directo.</p>
       </div>
       <div class="card">
-        <p class="hint">Visibilidad del objetivo en el móvil de cada jugador: <strong>${g.modoVisibilidadObjetivo==='oculto'?'Oculto (privacidad)':'Siempre visible'}</strong></p>
-        <button class="btn btn-outline" onclick="actionToggleVisibilidad()">Cambiar a ${g.modoVisibilidadObjetivo==='oculto'?'siempre visible':'oculto'}</button>
+        <h3 style="margin-bottom:4px;">Objetivo en el móvil de cada jugador</h3>
+        <p class="hint" style="margin-bottom:6px;">Cómo ve cada jugador a quién tiene que cazar. Toca una opción para elegirla.</p>
+        ${[['visible','Siempre visible','El jugador ve la foto y el nombre de su objetivo en todo momento.'],['oculto','Oculto (más privacidad)','La pantalla no muestra nada; el jugador pulsa «Ver mi objetivo» y se vuelve a ocultar solo. Así nadie le ve el móvil de reojo.']].map(o=>`
+          <button class="opt ${(g.modoVisibilidadObjetivo||'visible')===o[0]?'sel':''}" ${state._savingOpt?'disabled':''} onclick="actionSetVisibilidad('${o[0]}')">
+            <span class="mark">${(g.modoVisibilidadObjetivo||'visible')===o[0]?'✓':''}</span><span><span class="t">${o[1]}</span><span class="d">${o[2]}</span></span>
+          </button>`).join('')}
       </div>
       <div class="card">
         <h3 style="margin-bottom:10px;">Solicitudes de cambio de misión</h3>
