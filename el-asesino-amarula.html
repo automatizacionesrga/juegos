@@ -619,7 +619,7 @@ async function actionCreateGame(participa, modoEspectador, tipoEvento, modoVisib
     }
   }
   const accionesOrganizador = (state.cfgAcciones||'').split('\n')
-    .map(a=>a.trim().slice(0,120)).filter(Boolean)
+    .map(a=>limpiaAccion(a)).filter(Boolean)
     .filter((a,i,arr)=>arr.indexOf(a)===i).slice(0,60);
   let code = genCode();
   for(let i=0;i<5;i++){
@@ -690,13 +690,50 @@ async function actionGoJoinExisting(){
   goToJoin();
 }
 
+// Las acciones continúan la frase «Matarás a tu objetivo si consigues que…» (ej: «te cuente su destino soñado»)
+function limpiaAccion(t){
+  let s = String(t||'').trim().replace(/\s+/g,' ');
+  s = s.replace(/^(matar[áa]s a tu objetivo si consigues que|consigue que( tu objetivo)?)\s*:?\s*/i,'');
+  s = s.replace(/^que\s+/i,'');
+  s = s.replace(/[.!\s]+$/,'');
+  const w = s.split(' ')[0];
+  if(/^[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+$/.test(w) && w.length>1) s = s[0].toLowerCase()+s.slice(1);
+  return s.slice(0,120);
+}
+function avisoAccion(s){
+  const p = (s.split(' ')[0]||'').toLowerCase();
+  if(/^[a-záéíóúñü]+(ar|er|ir)(se|me|te|lo|la|le|nos)?$/.test(p))
+    return 'Parece que empiezas con un verbo en infinitivo («'+p+'…»). La frase es «Matarás a tu objetivo si consigues que…», así que escribe el verbo conjugado: «te friegue un vaso», «baile la Macarena», «se haga una foto contigo».';
+  if(/(^|[\s,¿])(me|mi|mis|conmigo)(?=[\s,?!.]|$)/i.test(s))
+    return 'Quien reciba tu acción será quien tenga que conseguirla, así que háblale a él/ella: usa «te» o «contigo», no «me», «mi» ni «conmigo». Ej: «te ayude con la maleta».';
+  const pn = p.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if(/^(pon|da|di|trae|haz|pasa|sirve|deja|ayuda|acerca|ensena|cuenta|presta|compra|invita|abre|lleva|sujeta|coge)(me|nos)$/.test(pn))
+    return 'Eso suena a algo que dice quien escribe («'+p+'…»). Describe lo que hace tu objetivo para ti: «te ponga una copa», «te sujete el vaso».';
+  if(/^(un|una|unos|unas|el|la|los|las)$/.test(p))
+    return 'Falta el verbo: la frase es «Matarás a tu objetivo si consigues que…». Ej: «te dé un pico», «te haga un masaje en la espalda».';
+  if(/\?/.test(s))
+    return 'Escribe lo que tiene que hacer tu objetivo, no una pregunta. Ej: «te sujete el vaso».';
+  return null;
+}
+
 async function actionSubmitJoin(){
   const nombre = document.getElementById('j-nombre').value.trim();
-  const accion = document.getElementById('j-accion').value.trim();
+  const accion = limpiaAccion(document.getElementById('j-accion').value);
   const pin = document.getElementById('j-pin').value.trim();
   if(!nombre || !accion || !/^\d{4}$/.test(pin)){
     state.error='Rellena nombre, acción, y un PIN de exactamente 4 números.';
     render(); return;
+  }
+  const aviso = avisoAccion(accion);
+  if(aviso && state._accionAvisada !== accion){
+    state._accionAvisada = accion;
+    state.error = aviso + ' (Si prefieres dejarla tal cual, pulsa «Entrar en la partida» otra vez.)';
+    const pinVal = document.getElementById('j-pin').value;
+    render();
+    const n=document.getElementById('j-nombre'); if(n) n.value=nombre;
+    const ac=document.getElementById('j-accion'); if(ac) ac.value=accion;
+    const pi=document.getElementById('j-pin'); if(pi) pi.value=pinVal;
+    return;
   }
   state.error=null;
   state.joining=true;
@@ -833,7 +870,7 @@ function accionesAbrir(){
 function accionesCerrar(){ state.showAccionesModal = false; state._accError = null; render(); }
 function accionesAnadir(){
   const el = document.getElementById('acc-nueva');
-  const v = (el ? el.value : '').trim().slice(0,120);
+  const v = limpiaAccion(el ? el.value : '');
   if(!v) return;
   if(state._accDraft.includes(v)){ state._accError = 'Esa acción ya está en la lista.'; render(); return; }
   if(state._accDraft.length>=60){ state._accError = 'Máximo 60 acciones.'; render(); return; }
@@ -850,7 +887,7 @@ function accionesImportar(){
   state._accError = null; render();
 }
 async function accionesGuardar(){
-  const lista = state._accDraft.map(a=>(a||'').trim().slice(0,120)).filter((a,i,arr)=>a && arr.indexOf(a)===i).slice(0,60);
+  const lista = state._accDraft.map(a=>limpiaAccion(a)).filter((a,i,arr)=>a && arr.indexOf(a)===i).slice(0,60);
   state._accGuardando = true; render();
   const result = await callAction('setAcciones', { code: state.code, acciones: lista });
   state._accGuardando = false;
@@ -866,6 +903,7 @@ function accionesModalHtml(g){
       <div class="modal" style="max-height:88vh; overflow:auto;">
         <h3 style="margin-bottom:6px;">Acciones de reserva</h3>
         <p class="hint" style="margin-bottom:10px;">Cuando apruebes un cambio de misión, la nueva acción saldrá al azar de esta lista. No cambia las acciones que ya tienen los jugadores.</p>
+        <p class="hint" style="margin-bottom:10px;">Cada acción debe continuar la frase <strong>«Matarás a tu objetivo si consigues que…»</strong>, con «te» o «contigo» para quien la use. Ej: <em>te cuente un secreto</em>, <em>se haga una foto contigo</em>.</p>
         <p class="hint" style="margin-bottom:10px;"><strong>Cómo se usa:</strong> escribe sobre una acción para cambiarla, pulsa ✕ para borrarla, o escribe abajo una nueva y pulsa «Añadir». Al terminar, pulsa «Guardar cambios».${state._accPrecargada?' <em>Hemos cargado aquí las acciones que propusieron los jugadores para que puedas editarlas.</em>':''}</p>
         ${draft.map((a,i)=>`
           <div style="display:flex; gap:6px; margin-bottom:6px;">
@@ -873,7 +911,7 @@ function accionesModalHtml(g){
             <button class="btn btn-outline" style="flex:none; width:auto; padding:8px 12px;" onclick="accionesBorrar(${i})" aria-label="Borrar">✕</button>
           </div>`).join('') || '<p class="hint" style="margin:6px 0;">Sin acciones propias todavía.</p>'}
         <div style="display:flex; gap:6px; margin:10px 0;">
-          <input type="text" id="acc-nueva" maxlength="120" placeholder="Nueva acción…" onkeydown="if(event.key==='Enter'){ event.preventDefault(); accionesAnadir(); }" style="flex:1; margin:0;">
+          <input type="text" id="acc-nueva" maxlength="120" placeholder="te cuente un secreto…" onkeydown="if(event.key==='Enter'){ event.preventDefault(); accionesAnadir(); }" style="flex:1; margin:0;">
           <button class="btn btn-gold" style="flex:none; width:auto; padding:8px 14px;" onclick="accionesAnadir()">Añadir</button>
         </div>
         ${state._accError? `<div class="err">${esc(state._accError)}</div>`:''}
@@ -1086,8 +1124,8 @@ function render(){
       </div>
       <div class="card">
         <p style="font-size:0.95rem;">¿Quieres añadir acciones propias de este evento? <span style="color:var(--text-dim); font-weight:400;">(opcional)</span></p>
-        <textarea id="cfg-acciones" placeholder="Una por línea. Ej:&#10;Que te cuente su destino favorito&#10;Que te haga una foto en la piscina&#10;Que brinde contigo" oninput="state.cfgAcciones=this.value">${esc(state.cfgAcciones||'')}</textarea>
-        <p class="hint">Se usan cuando un jugador pide cambiar su misión y tú lo apruebas. Si lo dejas vacío, el cambio sale de las acciones que propusieron los jugadores.</p>
+        <textarea id="cfg-acciones" placeholder="Una por línea, continuando «Matarás a tu objetivo si consigues que…». Ej:&#10;te cuente su destino favorito&#10;te haga una foto en la piscina&#10;brinde contigo" oninput="state.cfgAcciones=this.value">${esc(state.cfgAcciones||'')}</textarea>
+        <p class="hint">Se usan cuando un jugador pide cambiar su misión y tú lo apruebas. Cada una continúa la frase «Matarás a tu objetivo si consigues que…». Si lo dejas vacío, el cambio sale de las acciones que propusieron los jugadores.</p>
       </div>
       <div class="card">
         <p style="font-size:0.9rem;">¿Qué tipo de evento es? <span style="color:var(--text-dim); font-weight:400;">(opcional)</span></p>
@@ -1138,7 +1176,7 @@ function render(){
     const pasos = [
       { titulo:'¿CÓMO FUNCIONA?', texto:'Vas a recibir un objetivo: otra persona de la partida. Tu misión es conseguir que ESA PERSONA haga, sin sospechar, una acción secreta que tú le asignarás. Y lo importante de verdad: que habléis, os mováis y os conozcáis entre todos, incluso entre desconocidos. Da igual ganar o perder.' },
       { titulo:'CUANDO LO CONSIGUES', texto:'En cuanto tu objetivo hace la acción, queda eliminado. Heredas automáticamente a quién estaba cazando él y con qué acción — y sigues cazando. Al final solo queda un superviviente.' },
-      { titulo:'ELIGE BIEN TU ACCIÓN', texto:'Tu acción no volverá necesariamente a ti — se reparte al azar entre todos, y puede tocarle a cualquiera para usarla sobre cualquier objetivo. Por eso cuanto más realista y fácil de pedir sin levantar sospechas sea, más divertida será para todo el grupo.' }
+      { titulo:'ELIGE BIEN TU ACCIÓN', texto:'Tu acción no volverá necesariamente a ti — se reparte al azar entre todos, y puede tocarle a cualquiera para usarla sobre cualquier objetivo. Por eso cuanto más realista y fácil de pedir sin levantar sospechas sea, más divertida será para todo el grupo. Escríbela siempre dirigida a quien la use, completando la frase «Matarás a tu objetivo si consigues que…» (ej: «te cuente su destino soñado», «se haga una foto contigo»).' }
     ];
     const p = pasos[step];
     html = `
@@ -1171,9 +1209,11 @@ function render(){
         <p class="hint">Si has abierto este enlace desde WhatsApp y la cámara no responde, pulsa los tres puntos de arriba y elige "Abrir en el navegador", o usa "Desde galería".</p>
         <label>Tu nombre</label>
         <input type="text" id="j-nombre" value="${esc(profile.nombre||'')}" placeholder="Nombre visible para los demás">
-        <label>Propón una acción para matar <span class="info-icon" onclick="toggleAccionHint()">ⓘ</span></label>
-        ${state.showAccionHint? `<p class="hint">Ideas: que te cuente su destino soñado, que brinde contigo, que te haga una foto juntos, que te cuente un secreto... Cuanto más fácil de pedir sin levantar sospechas y más divertida, ¡mejor será el juego!</p>` : ''}
-        <input type="text" id="j-accion" placeholder="Ej: que te cuente su destino soñado">
+        <label>Tu acción para matar <span class="info-icon" onclick="toggleAccionHint()">ⓘ</span></label>
+        <p style="margin:2px 0 6px; color:var(--gold); font-weight:600;">Matarás a tu objetivo si consigues que…</p>
+        <input type="text" id="j-accion" maxlength="120" placeholder="te cuente su destino soñado">
+        <p class="hint">Completa la frase con lo que tiene que hacer tu objetivo. «Te» eres tú, quien intenta matarlo: escribe «te cuente», «brinde contigo»… (nunca «me» ni «conmigo»).</p>
+        ${state.showAccionHint? `<p class="hint">✔ <em>te cuente su destino soñado</em> · <em>brinde contigo</em> · <em>se haga una foto contigo</em> · <em>te cuente un secreto</em> · <em>baile la Macarena</em><br>✘ «Fregar un vaso» (infinitivo) · «Ponme una copa» (habla el que escribe) · «Que me deje una camiseta» (me/conmigo)<br>Cuanto más fácil de pedir sin levantar sospechas y más divertida, ¡mejor será el juego!</p>` : ''}
         <label>Tu PIN secreto (4 números)</label>
         <input type="tel" id="j-pin" maxlength="4" placeholder="0000">
         <p class="hint">Dale este PIN solo a quien consiga matarte, en el momento en que lo logre.</p>
@@ -1247,7 +1287,7 @@ function render(){
               ? `<button class="btn btn-outline" onclick="hideTarget()">Ocultar ahora</button>`
               : `<button class="btn btn-gold" onclick="revealTarget()">Ver mi objetivo</button>`}
           </div>` : ''}
-        <p class="tag" style="margin-top:14px;">Consigue que tu objetivo:</p>
+        <p class="tag" style="margin-top:14px;">Matarás a tu objetivo si consigues que…</p>
         <div class="mission-box">${esc(me.accionAsignada)}</div>
         <button class="btn btn-blood" onclick="state.showKillModal=true; state.modalError=null; render();">He completado mi misión</button>
         <p class="hint" style="text-align:center; margin-top:10px;">
