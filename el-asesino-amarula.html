@@ -519,7 +519,7 @@ async function saveJoin(code, jugador){ return callAction('join', { code, jugado
 function saveSession(){
   try{
     localStorage.setItem('elasesino-session', JSON.stringify({
-      code: state.code, myPlayerId: state.myPlayerId, role: state.role
+      code: state.code, myPlayerId: state.myPlayerId, role: state.role, reasignVista: state.lastReassignSeen || null
     }));
   }catch(e){ /* almacenamiento no disponible, no pasa nada grave */ }
 }
@@ -590,9 +590,10 @@ async function pollTick(){
       }
       else if(me.estado==='muerto'){ if(state.screen!=='dead') state.screen='dead'; }
       else if(g.estado==='en_curso' && state.screen==='lobby'){ state.screen='game'; }
-      else if(g.estado==='en_curso' && g.ultimaReasignacion && g.ultimaReasignacion!==state.lastReassignSeen){
-        state.lastReassignSeen = g.ultimaReasignacion;
-        if(state.screen==='game'){ state.showReassignModal = true; sfxReassign(); }
+      // Aviso de "el juego ha cambiado" para TODOS los jugadores, vivos y caídos
+      if(g.estado==='en_curso' && g.ultimaReasignacion && g.ultimaReasignacion!==state.lastReassignSeen && (state.screen==='game' || state.screen==='dead')){
+        state.lastReassignSeen = g.ultimaReasignacion; saveSession();
+        state.showReassignModal = true; avisoReasignacion();
       }
     }
   } else if(state.role==='admin'){
@@ -609,6 +610,52 @@ async function pollTick(){
     }
   }
   render();
+}
+function avisoReasignacion(){
+  try{ sfxReassign(); }catch(e){}
+  try{ if(navigator.vibrate) navigator.vibrate([400,150,400,150,800]); }catch(e){}
+  try{ const t = document.title.replace(/^⚠️ ¡EL JUEGO HA CAMBIADO!\s*·\s*/,''); document.title = '⚠️ ¡EL JUEGO HA CAMBIADO! · '+t; setTimeout(()=>{ document.title = t; }, 10000); }catch(e){}
+}
+function reassignModalHtml(me){
+  const vivo = me && me.estado==='vivo';
+  return `
+    <div class="modal-bg">
+      <div class="modal center">
+        <h3 style="margin-bottom:10px;">🔔 EL JUEGO HA CAMBIADO</h3>
+        <p class="hint" style="font-size:0.95rem;">El organizador ha reasignado los objetivos y las acciones de todos los jugadores que siguen vivos.</p>
+        ${vivo
+          ? `<p class="hint" style="font-size:0.95rem;"><strong>Revisa ya tu nuevo objetivo y tu nueva acción.</strong> Lo que sabías ha dejado de valer. Y avisa a tus compañeros por si no han visto este aviso.</p>`
+          : `<p class="hint" style="font-size:0.95rem;">Aunque hayas caído, <strong>avisa a tus compañeros que siguen vivos</strong>: puede que no hayan visto este aviso y necesiten revisar su nuevo objetivo y su acción.</p>`}
+        <button class="btn btn-gold" onclick="state.showReassignModal=false; render();">${vivo?'Ver mi nuevo objetivo →':'Entendido'}</button>
+      </div>
+    </div>`;
+}
+function esquemaCazaHtml(g){
+  const byId = {}; g.jugadores.forEach(j=>{ byId[j.id] = j; });
+  const vivos = g.jugadores.filter(j=>j.estado==='vivo');
+  const muertos = g.jugadores.filter(j=>j.estado==='muerto');
+  const orden = [], visto = {};
+  vivos.forEach(j=>{ let c = j; while(c && c.estado==='vivo' && !visto[c.id]){ visto[c.id] = 1; orden.push(c); c = byId[c.objetivoId]; } });
+  const av = j => `<img src="${avatarSrc(photoOf(j.id))}" alt="" style="width:34px; height:34px; border-radius:50%; object-fit:cover; flex:none;">`;
+  return `
+    <div class="card" id="esquema">
+      <h3 style="margin-bottom:4px;">Quién caza a quién</h3>
+      <p class="hint" style="margin:0 0 10px;">Solo lo ves tú, el organizador. ${vivos.length} jugadores en pie${g.ultimaReasignacion? ' · última reasignación a las '+fmtHora(g.ultimaReasignacion):''}.</p>
+      ${orden.length? orden.map(j=>{
+        const t = byId[j.objetivoId];
+        return `<div class="part" style="padding:10px 12px;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            ${av(j)}<strong>${esc(j.nombre)}</strong><span style="color:var(--gold);">➜</span>
+            ${t? `${av(t)}<strong>${esc(t.nombre)}</strong>${t.estado==='muerto'?' 💀':''}` : '<em>sin objetivo</em>'}
+          </div>
+          <div class="hint" style="margin:6px 0 0;">${j.accionAsignada? 'si consigue que <em>'+esc(j.accionAsignada)+'</em>' : 'Sin acción asignada'}</div>
+        </div>`;
+      }).join('') : '<p class="hint">Todavía no hay objetivos asignados.</p>'}
+      ${muertos.length? `<p class="hint" style="margin-top:8px;">Caídos (${muertos.length}): ${muertos.map(j=>esc(j.nombre)).join(', ')}</p>`:''}
+    </div>`;
+}
+function fmtHora(ms){
+  try{ return new Date(ms).toLocaleTimeString('es-ES', { timeZone:'Europe/Madrid', hour:'2-digit', minute:'2-digit' }); }catch(e){ return '—'; }
 }
 function startPolling(){
   if(state.pollTimer) clearInterval(state.pollTimer);
@@ -843,14 +890,20 @@ async function actionConfirmKill(){
 }
 
 async function actionReassignAll(){
+  if(state._reasignando) return;
+  const n = (state._game.jugadores||[]).filter(j=>j.estado==='vivo').length;
+  if(!window.confirm('¿Reasignar objetivo y acción a los '+n+' jugadores vivos?\n\nTodos los jugadores (vivos y caídos) recibirán un aviso. No se puede deshacer.')) return;
+  state._reasignando = true; state._reasignMsg = null; state.error = null; render();
   const result = await callAction('reassign', { code: state.code });
+  state._reasignando = false;
   if(!result.ok){
-    state.error = result.error==='vivos insuficientes' ? 'Necesitas al menos 3 jugadores vivos para reasignar.' : 'No se ha podido reasignar. Inténtalo de nuevo.';
+    state.error = result.error==='vivos insuficientes' ? 'Necesitas al menos 3 jugadores vivos para reasignar.' : 'No se ha podido reasignar. Comprueba la conexión e inténtalo de nuevo.';
     render(); return;
   }
-  state.error=null;
   state._game = result.data;
+  state._reasignMsg = '✅ Hecho a las '+fmtHora(result.data.ultimaReasignacion)+'. Los '+n+' jugadores vivos tienen nuevo objetivo y nueva acción (abajo tienes el esquema). Cada jugador verá el aviso en cuanto mire su móvil.';
   render();
+  setTimeout(()=>{ const el=document.getElementById('esquema'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }, 150);
 }
 
 async function actionSolicitarCambio(){
@@ -1384,17 +1437,7 @@ function render(){
           </div>
         </div>`;
     }
-    if(state.showReassignModal){
-      html += `
-        <div class="modal-bg">
-          <div class="modal center">
-            <h3 style="margin-bottom:10px;">⚠️ EL JUEGO HA DADO UN VUELCO</h3>
-            <p class="hint" style="font-size:0.95rem;">¿Pensabas que ya lo tenías controlado?</p>
-            <p class="hint" style="font-size:0.95rem;">Todas las misiones han cambiado. Olvida lo que sabías — nadie es ya quien creías que era.</p>
-            <button class="btn btn-gold" onclick="state.showReassignModal=false; render();">Ver mi nuevo objetivo →</button>
-          </div>
-        </div>`;
-    }
+    if(state.showReassignModal){ html += reassignModalHtml(me); }
     }
   }
 
@@ -1415,6 +1458,7 @@ function render(){
         <button class="btn btn-outline" onclick="actionOpenSpectatorFromInside()">Ver marcador</button>
       </div>
       <div class="footer-nav"><a onclick="goHome()">Salir</a></div>`;
+    if(state.showReassignModal){ html += reassignModalHtml(me); }
   }
 
   else if(state.screen==='admin-panel'){
@@ -1425,10 +1469,13 @@ function render(){
       ${codePillHtml()}
       <div class="top"><h1>PANEL DEL ORGANIZADOR</h1><p>Partida ${esc(state.code)} · ${vivos.length} vivos / ${g.jugadores.length}</p></div>
       <div class="card">
-        <button class="btn btn-gold" onclick="actionReassignAll()">Reasignar todos los objetivos</button>
+        <button class="btn btn-gold" ${state._reasignando?'disabled':''} onclick="actionReassignAll()">${state._reasignando?'Reasignando…':'Reasignar todos los objetivos'}</button>
+        ${state._reasignMsg? `<div style="margin-top:10px; padding:10px 12px; border:1px solid var(--gold); border-radius:8px; font-size:.9rem;">${esc(state._reasignMsg)}</div>`:''}
+        ${g.ultimaReasignacion? `<p class="hint" style="margin-top:8px;">Última reasignación: ${fmtHora(g.ultimaReasignacion)}</p>`:''}
         <p class="hint">Reparte de nuevo objetivo y acción solo entre los jugadores vivos, y avisa a todos con un mensaje épico. ${(g.accionesOrganizador||[]).length? `Las acciones saldrán <strong>solo de tu lista de acciones de reserva</strong> (${g.accionesOrganizador.length}).` : 'Las acciones saldrán de las que propusieron los jugadores (no tienes lista de reserva).'}</p>
         ${state.error? `<div class="err">${esc(state.error)}</div>`:''}
       </div>
+      ${esquemaCazaHtml(g)}
       <div class="card">
         <h3 style="margin-bottom:4px;">Marcador público</h3>
         <p class="hint" style="margin-bottom:6px;">Lo que ven los jugadores o el proyector cuando abren el marcador. Toca una opción para elegirla.</p>
@@ -2105,7 +2152,9 @@ async function screenForGameState(g, role, myPlayerId){
       const pantalla = await screenForGameState(g, session.role, session.myPlayerId);
       if(pantalla){
         state.code = session.code; state.role = session.role; state.myPlayerId = session.myPlayerId;
-        state._game = g; state.lastReassignSeen = g.ultimaReasignacion || null; state.screen = pantalla;
+        state._game = g; state.screen = pantalla;
+        // Si hubo una reasignación que este móvil no llegó a ver (app cerrada, sin batería...), se le avisa al abrir
+        state.lastReassignSeen = (session.role==='player' && ('reasignVista' in session)) ? session.reasignVista : (g.ultimaReasignacion || null);
         if(pantalla!=='ranking') startPolling();
         if(g.estado!=='finalizada') callAction('ping', { code: session.code }); // cuenta como actividad de la partida
         render(); ensurePhotos(g);
